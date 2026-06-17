@@ -121,12 +121,12 @@ function Hero() {
           trusted by NGOs and oil &amp; gas employers.
         </p>
         <div className="flex flex-wrap gap-4">
-          <a
-            href="#builder"
+          <Link
+            to="/auth"
             className="px-8 py-4 bg-foreground text-primary-foreground font-semibold rounded-xs hover:bg-foreground/90 transition-transform active:scale-95"
           >
             Create my CV
-          </a>
+          </Link>
           <a
             href="#preview"
             className="px-8 py-4 border border-border font-semibold rounded-xs hover:bg-paper transition-colors"
