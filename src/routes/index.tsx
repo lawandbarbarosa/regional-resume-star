@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,6 +41,7 @@ function Index() {
 }
 
 function Nav({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
+  const { user, loading } = useAuth();
   const langs: { id: Lang; label: string; arabic?: boolean }[] = [
     { id: "en", label: "EN" },
     { id: "ku", label: "کوردی", arabic: true },
@@ -49,31 +51,50 @@ function Nav({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
     <nav className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-md border-b border-border">
       <div className="max-w-7xl mx-auto px-6 py-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="flex min-w-0 items-center gap-8">
-          <a href="#" className="font-display text-xl font-bold tracking-tight truncate">
+          <Link to="/" className="font-display text-xl font-bold tracking-tight truncate">
             LocalCV
-          </a>
+          </Link>
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <a href="#builder" className="hover:text-foreground transition-colors">Builder</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#" className="hover:text-foreground transition-colors">NGO Guide</a>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 bg-paper/80 p-1 rounded-sm border border-border shadow-xs">
-          {langs.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => setLang(l.id)}
-              className={`px-3 py-1 text-xs rounded-xs transition-colors ${
-                l.arabic ? "font-arabic font-medium" : "font-semibold"
-              } ${
-                lang === l.id
-                  ? "bg-foreground text-primary-foreground"
-                  : "hover:bg-foreground/5 text-foreground"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1 bg-paper/80 p-1 rounded-sm border border-border shadow-xs">
+            {langs.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => setLang(l.id)}
+                className={`px-3 py-1 text-xs rounded-xs transition-colors ${
+                  l.arabic ? "font-arabic font-medium" : "font-semibold"
+                } ${
+                  lang === l.id
+                    ? "bg-foreground text-primary-foreground"
+                    : "hover:bg-foreground/5 text-foreground"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+          {!loading && (
+            user ? (
+              <Link
+                to="/dashboard"
+                className="px-3 py-1.5 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <Link
+                to="/auth"
+                className="px-3 py-1.5 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90"
+              >
+                Sign in
+              </Link>
+            )
+          )}
         </div>
       </div>
     </nav>
@@ -100,12 +121,12 @@ function Hero() {
           trusted by NGOs and oil &amp; gas employers.
         </p>
         <div className="flex flex-wrap gap-4">
-          <a
-            href="#builder"
+          <Link
+            to="/auth"
             className="px-8 py-4 bg-foreground text-primary-foreground font-semibold rounded-xs hover:bg-foreground/90 transition-transform active:scale-95"
           >
             Create my CV
-          </a>
+          </Link>
           <a
             href="#preview"
             className="px-8 py-4 border border-border font-semibold rounded-xs hover:bg-paper transition-colors"
