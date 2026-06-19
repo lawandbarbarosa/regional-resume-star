@@ -105,7 +105,7 @@ export const generateCv = createServerFn({ method: "POST" })
     const { error: upErr } = await supabase
       .from("cv_drafts")
       .update({
-        generated: generated as unknown as Record<string, unknown>,
+        generated: JSON.parse(JSON.stringify(generated)),
         output_languages: data.languages,
       })
       .eq("cv_id", data.cvId)
