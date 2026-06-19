@@ -135,7 +135,11 @@ function CVCard({ cv }: { cv: CV }) {
   }[lang][cv.language];
 
   return (
-    <article className="bg-paper p-6 hover:bg-background transition-colors group">
+    <Link
+      to="/cv/$id/build"
+      params={{ id: cv.id }}
+      className="bg-paper p-6 hover:bg-background transition-colors group block"
+    >
       <div className="flex items-baseline justify-between mb-6">
         <span className="text-[10px] font-mono uppercase tracking-widest text-accent">
           {langLabel}
@@ -152,7 +156,7 @@ function CVCard({ cv }: { cv: CV }) {
         <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
         <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
       </div>
-    </article>
+    </Link>
   );
 }
 
