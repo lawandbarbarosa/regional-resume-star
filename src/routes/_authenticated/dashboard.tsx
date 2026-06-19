@@ -52,8 +52,8 @@ function Dashboard() {
       .select("id, title, language, updated_at")
       .single();
     if (error) return toast.error(error.message);
-    setCvs((prev) => [data as CV, ...prev]);
     toast.success(t("dash_toast_created"));
+    navigate({ to: "/cv/$id/build", params: { id: data.id } });
   }
 
   async function signOut() {
