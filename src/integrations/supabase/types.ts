@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      cv_drafts: {
+        Row: {
+          answers: Json
+          created_at: string
+          current_step: number
+          cv_id: string
+          generated: Json | null
+          id: string
+          output_languages: string[]
+          template: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          current_step?: number
+          cv_id: string
+          generated?: Json | null
+          id?: string
+          output_languages?: string[]
+          template?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          current_step?: number
+          cv_id?: string
+          generated?: Json | null
+          id?: string
+          output_languages?: string[]
+          template?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cv_drafts_cv_id_fkey"
+            columns: ["cv_id"]
+            isOneToOne: true
+            referencedRelation: "cvs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cvs: {
         Row: {
           created_at: string

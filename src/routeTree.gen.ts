@@ -13,6 +13,9 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCvIdPreviewRouteImport } from './routes/_authenticated/cv.$id.preview'
+import { Route as AuthenticatedCvIdDesignRouteImport } from './routes/_authenticated/cv.$id.design'
+import { Route as AuthenticatedCvIdBuildRouteImport } from './routes/_authenticated/cv.$id.build'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -33,16 +36,38 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCvIdPreviewRoute =
+  AuthenticatedCvIdPreviewRouteImport.update({
+    id: '/cv/$id/preview',
+    path: '/cv/$id/preview',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCvIdDesignRoute = AuthenticatedCvIdDesignRouteImport.update({
+  id: '/cv/$id/design',
+  path: '/cv/$id/design',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCvIdBuildRoute = AuthenticatedCvIdBuildRouteImport.update({
+  id: '/cv/$id/build',
+  path: '/cv/$id/build',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
+  '/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
+  '/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
+  '/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
+  '/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,18 +75,36 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
+  '/_authenticated/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
+  '/_authenticated/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/cv/$id/build'
+    | '/cv/$id/design'
+    | '/cv/$id/preview'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/dashboard'
+    | '/cv/$id/build'
+    | '/cv/$id/design'
+    | '/cv/$id/preview'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/cv/$id/build'
+    | '/_authenticated/cv/$id/design'
+    | '/_authenticated/cv/$id/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -100,15 +143,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cv/$id/preview': {
+      id: '/_authenticated/cv/$id/preview'
+      path: '/cv/$id/preview'
+      fullPath: '/cv/$id/preview'
+      preLoaderRoute: typeof AuthenticatedCvIdPreviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cv/$id/design': {
+      id: '/_authenticated/cv/$id/design'
+      path: '/cv/$id/design'
+      fullPath: '/cv/$id/design'
+      preLoaderRoute: typeof AuthenticatedCvIdDesignRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cv/$id/build': {
+      id: '/_authenticated/cv/$id/build'
+      path: '/cv/$id/build'
+      fullPath: '/cv/$id/build'
+      preLoaderRoute: typeof AuthenticatedCvIdBuildRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedCvIdBuildRoute: typeof AuthenticatedCvIdBuildRoute
+  AuthenticatedCvIdDesignRoute: typeof AuthenticatedCvIdDesignRoute
+  AuthenticatedCvIdPreviewRoute: typeof AuthenticatedCvIdPreviewRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedCvIdBuildRoute: AuthenticatedCvIdBuildRoute,
+  AuthenticatedCvIdDesignRoute: AuthenticatedCvIdDesignRoute,
+  AuthenticatedCvIdPreviewRoute: AuthenticatedCvIdPreviewRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -122,13 +192,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
