@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import type { CvLang, GeneratedByLang, GeneratedCV, TemplateId } from "@/lib/cv-types";
 import { generateCv } from "@/lib/cv-generate.functions";
+import { requireLifetimePlan } from "@/lib/require-lifetime-plan";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/preview")({
   head: () => ({ meta: [{ title: "Your CV · LocalCV" }] }),
@@ -19,6 +20,7 @@ const LANG_FONT: Record<CvLang, string> = { en: "font-sans", ku: "font-arabic", 
 
 function PreviewPage() {
   const { id } = Route.useParams();
+  const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const { lang, dir, font } = useLang();
   const callGenerate = useServerFn(generateCv);
@@ -32,6 +34,7 @@ function PreviewPage() {
 
   useEffect(() => {
     (async () => {
+      if (!(await requireLifetimePlan(user.id, navigate))) return;
       const { data } = await supabase
         .from("cv_drafts")
         .select("generated, template, output_languages")
@@ -46,7 +49,7 @@ function PreviewPage() {
       }
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, user.id, navigate]);
 
   async function regen() {
     setBusy(true);

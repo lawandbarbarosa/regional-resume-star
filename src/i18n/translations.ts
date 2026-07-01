@@ -1,3 +1,5 @@
+import { MARKETING_STRINGS } from "./marketing-strings";
+
 export type Lang = "en" | "ku" | "ar";
 
 export const LANG_META: Record<Lang, { label: string; nativeLabel: string; dir: "ltr" | "rtl"; font: string }> = {
@@ -8,7 +10,8 @@ export const LANG_META: Record<Lang, { label: string; nativeLabel: string; dir: 
 
 export const STRINGS = {
   en: {
-    // Nav
+    ...MARKETING_STRINGS.en,
+    // Nav (legacy)
     nav_builder: "Builder",
     nav_features: "Features",
     nav_ngo: "NGO Guide",
@@ -163,6 +166,7 @@ export const STRINGS = {
   },
 
   ku: {
+    ...MARKETING_STRINGS.ku,
     nav_builder: "بەرنامەی دروستکردن",
     nav_features: "تایبەتمەندییەکان",
     nav_ngo: "ڕێنمایی NGO",
@@ -309,6 +313,7 @@ export const STRINGS = {
   },
 
   ar: {
+    ...MARKETING_STRINGS.ar,
     nav_builder: "المُنشئ",
     nav_features: "الميزات",
     nav_ngo: "دليل المنظمات",

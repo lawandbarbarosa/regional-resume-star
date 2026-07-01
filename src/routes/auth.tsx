@@ -7,6 +7,9 @@ import { useLang } from "@/i18n/LanguageProvider";
 import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    redirect: typeof s.redirect === "string" ? s.redirect : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sign in · LocalCV" },
@@ -22,8 +25,19 @@ export const Route = createFileRoute("/auth")({
 type Tab = "email" | "phone";
 type Mode = "signin" | "signup";
 
+const ALLOWED_REDIRECTS = ["/dashboard", "/pricing"] as const;
+
+function safeRedirect(path: string | undefined): "/dashboard" | "/pricing" {
+  if (path && (ALLOWED_REDIRECTS as readonly string[]).includes(path)) {
+    return path as "/dashboard" | "/pricing";
+  }
+  return "/dashboard";
+}
+
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
+  const afterAuth = safeRedirect(redirect);
   const { t, dir, font, lang } = useLang();
   const isEn = lang === "en";
   const [tab, setTab] = useState<Tab>("email");
@@ -31,13 +45,13 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) navigate({ to: afterAuth, replace: true });
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === "SIGNED_IN" && s) navigate({ to: "/dashboard", replace: true });
+      if (event === "SIGNED_IN" && s) navigate({ to: afterAuth, replace: true });
     });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, afterAuth]);
 
   return (
     <div dir={dir} className={`min-h-screen bg-background grid lg:grid-cols-2 ${font}`}>
