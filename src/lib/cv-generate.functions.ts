@@ -53,6 +53,20 @@ Rules:
 - Keep dates in the candidate's original format.
 - Tone: confident, professional, regionally appropriate.
 
+You MUST return a single JSON object matching EXACTLY this shape (same keys, same nesting, no extra keys, no markdown fences, no commentary):
+{
+  "fullName": string,
+  "headline": string,
+  "contact": { "email": string, "phone": string, "city": string },
+  "meta": { "nationality": string, "civilStatus": string },
+  "summary": string,
+  "experience": [ { "role": string, "company": string, "dates": string, "bullets": [string] } ],
+  "education": [ { "degree": string, "school": string, "dates": string } ],
+  "skills": [string],
+  "languages": [ { "name": string, "level": string } ]
+}
+If a field is unknown, use an empty string "" — never null, never omit the key. Arrays may be empty but must be present.
+
 Candidate raw answers (JSON):
 ${JSON.stringify(answers, null, 2)}`;
 }
