@@ -154,6 +154,12 @@ export const STRINGS = {
     dash_untitled: "Untitled CV",
     dash_toast_created: "New CV created.",
     dash_lang_full: "Language preference saved.",
+    dash_card_delete: "Delete",
+    dash_delete_title: "Delete this CV?",
+    dash_delete_body: "This will permanently remove the CV and all its saved answers. This cannot be undone.",
+    dash_delete_cancel: "Cancel",
+    dash_delete_confirm: "Delete CV",
+    dash_toast_deleted: "CV deleted.",
   },
 
   ku: {
