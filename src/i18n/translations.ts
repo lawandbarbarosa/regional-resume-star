@@ -300,6 +300,12 @@ export const STRINGS = {
     dash_untitled: "سی‌ڤی بێ ناونیشان",
     dash_toast_created: "سی‌ڤی نوێ دروستکرا.",
     dash_lang_full: "هەڵبژاردنی زمان پاشەکەوت کرا.",
+    dash_card_delete: "سڕینەوە",
+    dash_delete_title: "ئەم سی‌ڤییە بسڕیتەوە؟",
+    dash_delete_body: "بە شێوەیەکی هەمیشەیی سی‌ڤی و هەموو وەڵامەکانی دەسڕدرێنەوە. ناتوانرێت بگەڕێنرێتەوە.",
+    dash_delete_cancel: "پاشگەزبوونەوە",
+    dash_delete_confirm: "سڕینەوەی سی‌ڤی",
+    dash_toast_deleted: "سی‌ڤی سڕایەوە.",
   },
 
   ar: {
