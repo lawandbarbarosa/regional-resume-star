@@ -51,7 +51,7 @@ function PreviewPage() {
   async function regen() {
     setBusy(true);
     try {
-      const res = await callGenerate({ data: { cvId: id, languages: outLangs as [CvLang, CvLang] } });
+      const res = await callGenerate({ data: { cvId: id, languages: outLangs } });
       setGenerated(res.generated);
       toast.success(w(lang, "toast_generated"));
     } catch (e) {
