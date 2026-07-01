@@ -192,8 +192,8 @@ const AR: Dict = {
   s8_continue: "اختر التصميم →",
   design_title: "اختر تصميم سيرتك الذاتية",
   design_sub: "جميع القوالب متوافقة مع ATS وجاهزة للطباعة.",
-  langs_title: "اختر لغتين لسيرتك",
-  langs_sub: "سيكتب الذكاء الاصطناعي سيرتك باللغتين.",
+  langs_title: "اختر لغات سيرتك",
+  langs_sub: "اختر لغة أو لغتين أو ثلاث. سيكتب الذكاء الاصطناعي سيرتك بكل لغة.",
   generate_btn: "إنشاء بالذكاء الاصطناعي →",
   preview_title: "سيرتك الذاتية",
   preview_regen: "إعادة الإنشاء",
@@ -202,7 +202,7 @@ const AR: Dict = {
   preview_empty: "لم يُنشأ شيء بعد.",
   toast_saved: "تم الحفظ.",
   toast_generated: "سيرتك جاهزة.",
-  pick_exactly_two: "اختر لغتين فقط.",
+  pick_at_least_one: "اختر لغة واحدة على الأقل.",
   field_required: "هذا الحقل مطلوب.",
 };
 
