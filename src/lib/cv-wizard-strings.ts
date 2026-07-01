@@ -56,8 +56,8 @@ const EN: Dict = {
   s8_continue: "Pick design →",
   design_title: "Choose your CV design",
   design_sub: "All templates are ATS-friendly and print-ready.",
-  langs_title: "Pick 2 languages for your CV",
-  langs_sub: "AI will write your CV in both. (English + Arabic, English + Kurdish, or Kurdish + Arabic)",
+  langs_title: "Pick languages for your CV",
+  langs_sub: "Pick 1, 2, or 3 languages. AI will write your CV in each one.",
   generate_btn: "Generate with AI →",
   preview_title: "Your CV",
   preview_regen: "Regenerate",
@@ -66,7 +66,7 @@ const EN: Dict = {
   preview_empty: "Nothing generated yet.",
   toast_saved: "Saved.",
   toast_generated: "Your CV is ready.",
-  pick_exactly_two: "Pick exactly 2 languages.",
+  pick_at_least_one: "Pick at least 1 language.",
   field_required: "This field is required.",
 };
 
