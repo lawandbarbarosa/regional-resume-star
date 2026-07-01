@@ -93,33 +93,24 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
-          paid_at: string | null
           phone: string | null
-          plan_status: string
           preferred_language: Database["public"]["Enums"]["preferred_language"]
-          stripe_customer_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           id: string
-          paid_at?: string | null
           phone?: string | null
-          plan_status?: string
           preferred_language?: Database["public"]["Enums"]["preferred_language"]
-          stripe_customer_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
           id?: string
-          paid_at?: string | null
           phone?: string | null
-          plan_status?: string
           preferred_language?: Database["public"]["Enums"]["preferred_language"]
-          stripe_customer_id?: string | null
           updated_at?: string
         }
         Relationships: []

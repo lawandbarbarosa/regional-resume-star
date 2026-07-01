@@ -1,56 +1,48 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, X } from "lucide-react";
-import { toast } from "sonner";
 import { useLang } from "@/i18n/LanguageProvider";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { PageHero, SectionEyebrow, SectionTitle } from "@/components/marketing/PageHero";
-import { CheckoutButton } from "@/components/marketing/CheckoutButton";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { PlanStatus } from "@/lib/constants";
 
 export const Route = createFileRoute("/pricing")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    payment: typeof s.payment === "string" ? s.payment : undefined,
-  }),
   head: () => ({
     meta: [
       { title: "Pricing · LocalCV" },
-      { name: "description", content: "$10 one-time for lifetime access to LocalCV." },
+      { name: "description", content: "LocalCV pricing — free during launch, with planned lifetime access." },
     ],
   }),
   component: PricingPage,
 });
 
-function PricingPage() {
+function PricingCta({ className }: { className?: string }) {
   const { t } = useLang();
   const { user } = useAuth();
-  const { payment } = Route.useSearch();
-  const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
+  const base =
+    "inline-flex items-center justify-center px-8 py-4 font-semibold rounded-xs text-sm transition-transform active:scale-95 bg-foreground text-primary-foreground hover:bg-foreground/90";
 
-  useEffect(() => {
-    if (payment === "cancelled") toast.message(t("pricing_toast_cancelled"));
-  }, [payment, t]);
+  if (user) {
+    return (
+      <Link to="/dashboard" className={`${base} ${className ?? ""}`}>
+        {t("pricing_cta_dashboard")}
+      </Link>
+    );
+  }
+  return (
+    <Link to="/auth" search={{ redirect: "/dashboard" }} className={`${base} ${className ?? ""}`}>
+      {t("pricing_cta_start")}
+    </Link>
+  );
+}
 
-  useEffect(() => {
-    if (!user) {
-      setPlanStatus(null);
-      return;
-    }
-    supabase
-      .from("profiles")
-      .select("plan_status")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setPlanStatus((data?.plan_status as PlanStatus) ?? "free"));
-  }, [user]);
+function PricingPage() {
+  const { t } = useLang();
 
   const includes = [
     t("pricing_inc_1"),
@@ -83,7 +75,7 @@ function PricingPage() {
   return (
     <MarketingShell>
       <PageHero eyebrow={t("pricing_hero_eyebrow")} title={t("pricing_hero_title")} body={t("pricing_hero_body")}>
-        <CheckoutButton planStatus={planStatus} className="mx-auto" />
+        <PricingCta className="mx-auto" />
       </PageHero>
 
       <section className="px-6 pb-16 max-w-lg mx-auto">
@@ -94,7 +86,7 @@ function PricingPage() {
             <span className="text-sm text-muted-foreground font-mono uppercase">{t("pricing_plan_period")}</span>
           </div>
           <p className="text-sm text-muted-foreground mb-8">{t("pricing_plan_tagline")}</p>
-          <CheckoutButton planStatus={planStatus} className="w-full" />
+          <PricingCta className="w-full" />
         </article>
       </section>
 

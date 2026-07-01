@@ -6,7 +6,6 @@ import { useLang } from "@/i18n/LanguageProvider";
 import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import { EMPTY_ANSWERS, type WizardAnswers } from "@/lib/cv-types";
-import { requireLifetimePlan } from "@/lib/require-lifetime-plan";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/build")({
   head: () => ({ meta: [{ title: "Build your CV · LocalCV" }] }),
@@ -28,8 +27,6 @@ function BuildWizard() {
 
   useEffect(() => {
     (async () => {
-      if (!(await requireLifetimePlan(user.id, navigate))) return;
-
       // ensure draft exists, hydrate
       const { data: existing } = await supabase
         .from("cv_drafts")
@@ -49,7 +46,7 @@ function BuildWizard() {
       }
       setLoading(false);
     })();
-  }, [id, user.id, navigate]);
+  }, [id, user.id]);
 
   async function persist(next: WizardAnswers, nextStep: number) {
     setSaving(true);

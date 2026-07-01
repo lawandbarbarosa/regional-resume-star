@@ -1,10 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLang } from "@/i18n/LanguageProvider";
 import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
-import { CheckoutButton } from "@/components/marketing/CheckoutButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,12 +16,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-import type { PlanStatus } from "@/lib/constants";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    payment: typeof s.payment === "string" ? s.payment : undefined,
-  }),
   head: () => ({
     meta: [{ title: "Dashboard · LocalCV" }],
   }),
@@ -32,7 +27,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type Profile = {
   display_name: string | null;
   preferred_language: "en" | "ku" | "ar";
-  plan_status: PlanStatus;
 };
 
 type CV = {
@@ -45,71 +39,25 @@ type CV = {
 function Dashboard() {
   const navigate = useNavigate();
   const { user } = Route.useRouteContext();
-  const { payment } = Route.useSearch();
   const { t, dir, font, lang } = useLang();
   const isEn = lang === "en";
   const [profile, setProfile] = useState<Profile | null>(null);
   const [cvs, setCvs] = useState<CV[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = useCallback(async () => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("display_name, preferred_language, plan_status")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (data) {
-      setProfile({
-        display_name: data.display_name,
-        preferred_language: data.preferred_language,
-        plan_status: (data.plan_status as PlanStatus) ?? "free",
-      });
-    }
-    return data?.plan_status as PlanStatus | undefined;
-  }, [user.id]);
-
   useEffect(() => {
     (async () => {
-      const [, c] = await Promise.all([
-        loadProfile(),
+      const [p, c] = await Promise.all([
+        supabase.from("profiles").select("display_name, preferred_language").eq("id", user.id).maybeSingle(),
         supabase.from("cvs").select("id, title, language, updated_at").order("updated_at", { ascending: false }),
       ]);
+      setProfile(p.data);
       setCvs(c.data ?? []);
       setLoading(false);
     })();
-  }, [user.id, loadProfile]);
-
-  useEffect(() => {
-    if (payment !== "success") return;
-    let cancelled = false;
-    let attempts = 0;
-
-    const poll = async () => {
-      if (cancelled || attempts > 15) return;
-      attempts += 1;
-      const status = await loadProfile();
-      if (status === "lifetime") {
-        toast.success(t("paywall_toast_success"));
-        navigate({ to: "/dashboard", replace: true, search: {} });
-        return;
-      }
-      if (attempts === 1) toast.message(t("paywall_toast_pending"));
-      setTimeout(poll, 2000);
-    };
-    poll();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [payment, loadProfile, navigate, t]);
-
-  const isPaid = profile?.plan_status === "lifetime";
+  }, [user.id]);
 
   async function createCV() {
-    if (!isPaid) {
-      navigate({ to: "/pricing" });
-      return;
-    }
     const { data, error } = await supabase
       .from("cvs")
       .insert({ user_id: user.id, title: t("dash_untitled"), language: lang })
@@ -150,16 +98,6 @@ function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-12 md:py-16">
-        {!loading && !isPaid && (
-          <div className="mb-12 border-2 border-foreground bg-paper p-8 md:p-12 text-center">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-accent mb-3">{t("paywall_eyebrow")}</p>
-            <h2 className={`font-display text-3xl md:text-4xl mb-4 ${isEn ? "italic" : ""}`}>{t("paywall_title")}</h2>
-            <p className="text-muted-foreground max-w-lg mx-auto mb-2 leading-relaxed">{t("paywall_body")}</p>
-            <p className="text-[11px] font-mono text-muted-foreground mb-8">{t("paywall_features")}</p>
-            <CheckoutButton planStatus={profile?.plan_status ?? "free"} />
-          </div>
-        )}
-
         <div className="mb-12">
           <p className="text-[10px] font-mono uppercase tracking-widest text-accent mb-3">{t("dash_eyebrow")}</p>
           <h1 className={`font-display text-4xl md:text-5xl leading-tight mb-3 ${isEn ? "italic" : ""}`}>
@@ -168,46 +106,42 @@ function Dashboard() {
           <p className="text-muted-foreground max-w-xl">{t("dash_intro")}</p>
         </div>
 
-        {isPaid && (
-          <>
-            <div className="flex items-end justify-between mb-6 gap-4">
-              <h2 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
-                {t("dash_your_cvs")} · {cvs.length}
-              </h2>
-              <button
-                onClick={createCV}
-                className="px-5 py-2.5 bg-foreground text-primary-foreground font-semibold rounded-xs text-sm hover:bg-foreground/90 active:scale-[0.99]"
-              >
-                {t("dash_new_cv")}
-              </button>
-            </div>
+        <div className="flex items-end justify-between mb-6 gap-4">
+          <h2 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
+            {t("dash_your_cvs")} · {cvs.length}
+          </h2>
+          <button
+            onClick={createCV}
+            className="px-5 py-2.5 bg-foreground text-primary-foreground font-semibold rounded-xs text-sm hover:bg-foreground/90 active:scale-[0.99]"
+          >
+            {t("dash_new_cv")}
+          </button>
+        </div>
 
-            {loading ? (
-              <SkeletonGrid />
-            ) : cvs.length === 0 ? (
-              <EmptyState onCreate={createCV} />
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
-                {cvs.map((cv) => (
-                  <CVCard
-                    key={cv.id}
-                    cv={cv}
-                    onDelete={async () => {
-                      const prev = cvs;
-                      setCvs((list) => list.filter((c) => c.id !== cv.id));
-                      const { error } = await supabase.from("cvs").delete().eq("id", cv.id);
-                      if (error) {
-                        setCvs(prev);
-                        toast.error(error.message);
-                      } else {
-                        toast.success(t("dash_toast_deleted"));
-                      }
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+        {loading ? (
+          <SkeletonGrid />
+        ) : cvs.length === 0 ? (
+          <EmptyState onCreate={createCV} />
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
+            {cvs.map((cv) => (
+              <CVCard
+                key={cv.id}
+                cv={cv}
+                onDelete={async () => {
+                  const prev = cvs;
+                  setCvs((list) => list.filter((c) => c.id !== cv.id));
+                  const { error } = await supabase.from("cvs").delete().eq("id", cv.id);
+                  if (error) {
+                    setCvs(prev);
+                    toast.error(error.message);
+                  } else {
+                    toast.success(t("dash_toast_deleted"));
+                  }
+                }}
+              />
+            ))}
+          </div>
         )}
       </main>
     </div>

@@ -8,7 +8,6 @@ import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import { TEMPLATES, type TemplateId, type CvLang } from "@/lib/cv-types";
 import { generateCv } from "@/lib/cv-generate.functions";
-import { requireLifetimePlan } from "@/lib/require-lifetime-plan";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/design")({
   head: () => ({ meta: [{ title: "Design your CV · LocalCV" }] }),
@@ -23,7 +22,6 @@ const LANG_OPTIONS: { id: CvLang; label: string }[] = [
 
 function DesignPicker() {
   const { id } = Route.useParams();
-  const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const { lang, dir, font } = useLang();
   const callGenerate = useServerFn(generateCv);
@@ -35,7 +33,6 @@ function DesignPicker() {
 
   useEffect(() => {
     (async () => {
-      if (!(await requireLifetimePlan(user.id, navigate))) return;
       const { data } = await supabase
         .from("cv_drafts")
         .select("template, output_languages")
@@ -48,7 +45,7 @@ function DesignPicker() {
       }
       setLoading(false);
     })();
-  }, [id, user.id, navigate]);
+  }, [id]);
 
   function toggleLang(l: CvLang) {
     setPicked((prev) => {

@@ -84,16 +84,6 @@ export const generateCv = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const { data: profile, error: planErr } = await supabase
-      .from("profiles")
-      .select("plan_status")
-      .eq("id", userId)
-      .maybeSingle();
-    if (planErr) throw new Error(planErr.message);
-    if (profile?.plan_status !== "lifetime") {
-      throw new Error("Lifetime plan required. Please complete payment on the pricing page.");
-    }
-
     const { data: draft, error } = await supabase
       .from("cv_drafts")
       .select("answers, template")

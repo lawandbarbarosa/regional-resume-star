@@ -16,7 +16,6 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as ApiWebhooksStripeRouteImport } from './routes/api/webhooks/stripe'
 import { Route as AuthenticatedCvIdPreviewRouteImport } from './routes/_authenticated/cv.$id.preview'
 import { Route as AuthenticatedCvIdDesignRouteImport } from './routes/_authenticated/cv.$id.design'
 import { Route as AuthenticatedCvIdBuildRouteImport } from './routes/_authenticated/cv.$id.build'
@@ -55,11 +54,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ApiWebhooksStripeRoute = ApiWebhooksStripeRouteImport.update({
-  id: '/api/webhooks/stripe',
-  path: '/api/webhooks/stripe',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedCvIdPreviewRoute =
   AuthenticatedCvIdPreviewRouteImport.update({
     id: '/cv/$id/preview',
@@ -84,7 +78,6 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
   '/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
   '/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
@@ -96,7 +89,6 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
   '/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
   '/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
@@ -110,7 +102,6 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/api/webhooks/stripe': typeof ApiWebhooksStripeRoute
   '/_authenticated/cv/$id/build': typeof AuthenticatedCvIdBuildRoute
   '/_authenticated/cv/$id/design': typeof AuthenticatedCvIdDesignRoute
   '/_authenticated/cv/$id/preview': typeof AuthenticatedCvIdPreviewRoute
@@ -124,7 +115,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/pricing'
     | '/dashboard'
-    | '/api/webhooks/stripe'
     | '/cv/$id/build'
     | '/cv/$id/design'
     | '/cv/$id/preview'
@@ -136,7 +126,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/pricing'
     | '/dashboard'
-    | '/api/webhooks/stripe'
     | '/cv/$id/build'
     | '/cv/$id/design'
     | '/cv/$id/preview'
@@ -149,7 +138,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/pricing'
     | '/_authenticated/dashboard'
-    | '/api/webhooks/stripe'
     | '/_authenticated/cv/$id/build'
     | '/_authenticated/cv/$id/design'
     | '/_authenticated/cv/$id/preview'
@@ -162,7 +150,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   FaqRoute: typeof FaqRoute
   PricingRoute: typeof PricingRoute
-  ApiWebhooksStripeRoute: typeof ApiWebhooksStripeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -216,13 +203,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/webhooks/stripe': {
-      id: '/api/webhooks/stripe'
-      path: '/api/webhooks/stripe'
-      fullPath: '/api/webhooks/stripe'
-      preLoaderRoute: typeof ApiWebhooksStripeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/cv/$id/preview': {
       id: '/_authenticated/cv/$id/preview'
       path: '/cv/$id/preview'
@@ -271,7 +251,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   FaqRoute: FaqRoute,
   PricingRoute: PricingRoute,
-  ApiWebhooksStripeRoute: ApiWebhooksStripeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
