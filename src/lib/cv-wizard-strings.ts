@@ -56,8 +56,8 @@ const EN: Dict = {
   s8_continue: "Pick design →",
   design_title: "Choose your CV design",
   design_sub: "All templates are ATS-friendly and print-ready.",
-  langs_title: "Pick 2 languages for your CV",
-  langs_sub: "AI will write your CV in both. (English + Arabic, English + Kurdish, or Kurdish + Arabic)",
+  langs_title: "Pick languages for your CV",
+  langs_sub: "Pick 1, 2, or 3 languages. AI will write your CV in each one.",
   generate_btn: "Generate with AI →",
   preview_title: "Your CV",
   preview_regen: "Regenerate",
@@ -66,7 +66,7 @@ const EN: Dict = {
   preview_empty: "Nothing generated yet.",
   toast_saved: "Saved.",
   toast_generated: "Your CV is ready.",
-  pick_exactly_two: "Pick exactly 2 languages.",
+  pick_at_least_one: "Pick at least 1 language.",
   field_required: "This field is required.",
 };
 
@@ -124,8 +124,8 @@ const KU: Dict = {
   s8_continue: "هەڵبژاردنی دیزاین →",
   design_title: "دیزاینی سی‌ڤیەکەت هەڵبژێرە",
   design_sub: "هەموو نموونەکان گونجاون بۆ ATS و ئامادەن بۆ چاپ.",
-  langs_title: "٢ زمان بۆ سی‌ڤیەکەت هەڵبژێرە",
-  langs_sub: "AI سی‌ڤیەکەت بە هەردووکیان دەنووسێت.",
+  langs_title: "زمانەکانی سی‌ڤیەکەت هەڵبژێرە",
+  langs_sub: "١، ٢، یان ٣ زمان هەڵبژێرە. AI بە هەریەکەیان دەنووسێت.",
   generate_btn: "بە AI دروستی بکە →",
   preview_title: "سی‌ڤی تۆ",
   preview_regen: "دروستکردنەوە",
@@ -134,7 +134,7 @@ const KU: Dict = {
   preview_empty: "هێشتا هیچ دروست نەکراوە.",
   toast_saved: "پاشەکەوت کرا.",
   toast_generated: "سی‌ڤیەکەت ئامادەیە.",
-  pick_exactly_two: "تەنها ٢ زمان هەڵبژێرە.",
+  pick_at_least_one: "لانی کەم ١ زمان هەڵبژێرە.",
   field_required: "ئەم خانە پێویستە.",
 };
 
@@ -192,8 +192,8 @@ const AR: Dict = {
   s8_continue: "اختر التصميم →",
   design_title: "اختر تصميم سيرتك الذاتية",
   design_sub: "جميع القوالب متوافقة مع ATS وجاهزة للطباعة.",
-  langs_title: "اختر لغتين لسيرتك",
-  langs_sub: "سيكتب الذكاء الاصطناعي سيرتك باللغتين.",
+  langs_title: "اختر لغات سيرتك",
+  langs_sub: "اختر لغة أو لغتين أو ثلاث. سيكتب الذكاء الاصطناعي سيرتك بكل لغة.",
   generate_btn: "إنشاء بالذكاء الاصطناعي →",
   preview_title: "سيرتك الذاتية",
   preview_regen: "إعادة الإنشاء",
@@ -202,7 +202,7 @@ const AR: Dict = {
   preview_empty: "لم يُنشأ شيء بعد.",
   toast_saved: "تم الحفظ.",
   toast_generated: "سيرتك جاهزة.",
-  pick_exactly_two: "اختر لغتين فقط.",
+  pick_at_least_one: "اختر لغة واحدة على الأقل.",
   field_required: "هذا الحقل مطلوب.",
 };
 

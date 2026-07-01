@@ -77,7 +77,7 @@ export const generateCv = createServerFn({ method: "POST" })
     z
       .object({
         cvId: z.string().uuid(),
-        languages: z.array(z.enum(["en", "ku", "ar"])).length(2),
+        languages: z.array(z.enum(["en", "ku", "ar"])).min(1).max(3),
       })
       .parse(input),
   )
