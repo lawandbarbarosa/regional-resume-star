@@ -40,8 +40,8 @@ function DesignPicker() {
         .maybeSingle();
       if (data) {
         setTemplate((data.template as TemplateId) ?? "classic");
-        const out = (data.output_languages ?? ["en", "ar"]) as CvLang[];
-        setPicked(out.slice(0, 2));
+        const out = (data.output_languages ?? ["en"]) as CvLang[];
+        setPicked(out.length ? out.slice(0, 3) : ["en"]);
       }
       setLoading(false);
     })();
@@ -49,15 +49,18 @@ function DesignPicker() {
 
   function toggleLang(l: CvLang) {
     setPicked((prev) => {
-      if (prev.includes(l)) return prev.filter((x) => x !== l);
-      if (prev.length >= 2) return [prev[1], l];
+      if (prev.includes(l)) {
+        const next = prev.filter((x) => x !== l);
+        return next.length ? next : prev; // keep at least 1
+      }
+      if (prev.length >= 3) return prev;
       return [...prev, l];
     });
   }
 
   async function generate() {
-    if (picked.length !== 2) {
-      toast.error(w(lang, "pick_exactly_two"));
+    if (picked.length < 1) {
+      toast.error(w(lang, "pick_at_least_one"));
       return;
     }
     setBusy(true);
