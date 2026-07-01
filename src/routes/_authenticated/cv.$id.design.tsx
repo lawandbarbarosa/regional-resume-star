@@ -150,7 +150,7 @@ function DesignPicker() {
 
           <button
             onClick={generate}
-            disabled={busy || picked.length !== 2}
+            disabled={busy || picked.length < 1}
             className="mt-10 w-full md:w-auto px-8 py-3 bg-foreground text-primary-foreground font-semibold rounded-xs hover:bg-foreground/90 disabled:opacity-40"
           >
             {busy ? w(lang, "generating") : w(lang, "generate_btn")}
