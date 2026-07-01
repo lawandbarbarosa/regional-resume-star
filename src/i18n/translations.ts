@@ -446,6 +446,12 @@ export const STRINGS = {
     dash_untitled: "سيرة بدون عنوان",
     dash_toast_created: "أُنشئت سيرة جديدة.",
     dash_lang_full: "حُفظت لغتك المفضّلة.",
+    dash_card_delete: "حذف",
+    dash_delete_title: "حذف هذه السيرة؟",
+    dash_delete_body: "سيتم حذف السيرة وجميع إجاباتها المحفوظة نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    dash_delete_cancel: "إلغاء",
+    dash_delete_confirm: "حذف السيرة",
+    dash_toast_deleted: "تم حذف السيرة.",
   },
 } as const;
 
