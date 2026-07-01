@@ -124,8 +124,8 @@ const KU: Dict = {
   s8_continue: "هەڵبژاردنی دیزاین →",
   design_title: "دیزاینی سی‌ڤیەکەت هەڵبژێرە",
   design_sub: "هەموو نموونەکان گونجاون بۆ ATS و ئامادەن بۆ چاپ.",
-  langs_title: "٢ زمان بۆ سی‌ڤیەکەت هەڵبژێرە",
-  langs_sub: "AI سی‌ڤیەکەت بە هەردووکیان دەنووسێت.",
+  langs_title: "زمانەکانی سی‌ڤیەکەت هەڵبژێرە",
+  langs_sub: "١، ٢، یان ٣ زمان هەڵبژێرە. AI بە هەریەکەیان دەنووسێت.",
   generate_btn: "بە AI دروستی بکە →",
   preview_title: "سی‌ڤی تۆ",
   preview_regen: "دروستکردنەوە",
@@ -134,7 +134,7 @@ const KU: Dict = {
   preview_empty: "هێشتا هیچ دروست نەکراوە.",
   toast_saved: "پاشەکەوت کرا.",
   toast_generated: "سی‌ڤیەکەت ئامادەیە.",
-  pick_exactly_two: "تەنها ٢ زمان هەڵبژێرە.",
+  pick_at_least_one: "لانی کەم ١ زمان هەڵبژێرە.",
   field_required: "ئەم خانە پێویستە.",
 };
 
