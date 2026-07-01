@@ -4,6 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLang } from "@/i18n/LanguageProvider";
 import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -116,7 +128,21 @@ function Dashboard() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
             {cvs.map((cv) => (
-              <CVCard key={cv.id} cv={cv} />
+              <CVCard
+                key={cv.id}
+                cv={cv}
+                onDelete={async () => {
+                  const prev = cvs;
+                  setCvs((list) => list.filter((c) => c.id !== cv.id));
+                  const { error } = await supabase.from("cvs").delete().eq("id", cv.id);
+                  if (error) {
+                    setCvs(prev);
+                    toast.error(error.message);
+                  } else {
+                    toast.success(t("dash_toast_deleted"));
+                  }
+                }}
+              />
             ))}
           </div>
         )}
@@ -125,7 +151,7 @@ function Dashboard() {
   );
 }
 
-function CVCard({ cv }: { cv: CV }) {
+function CVCard({ cv, onDelete }: { cv: CV; onDelete: () => void | Promise<void> }) {
   const { t, lang } = useLang();
   const isEn = lang === "en";
   const langLabel = {
@@ -135,30 +161,54 @@ function CVCard({ cv }: { cv: CV }) {
   }[lang][cv.language];
 
   return (
-    <Link
-      to="/cv/$id/build"
-      params={{ id: cv.id }}
-      className="bg-paper p-6 hover:bg-background transition-colors group block"
-    >
+    <div className="bg-paper p-6 hover:bg-background transition-colors group relative">
       <div className="flex items-baseline justify-between mb-6">
         <span className="text-[10px] font-mono uppercase tracking-widest text-accent">
           {langLabel}
         </span>
-        <span className="size-1.5 rounded-full bg-accent" />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("dash_card_delete")}
+              className="p-1.5 -m-1.5 rounded-xs text-muted-foreground hover:text-destructive hover:bg-background transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("dash_delete_title")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("dash_delete_body")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("dash_delete_cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t("dash_delete_confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      <h3 className={`font-display text-xl mb-2 leading-snug truncate ${isEn ? "italic" : ""}`}>
-        {cv.title}
-      </h3>
-      <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
-        {t("dash_card_updated")} {new Date(cv.updated_at).toLocaleDateString()}
-      </p>
-      <div className="mt-6 flex items-center justify-between text-xs">
-        <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
-        <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
-      </div>
-    </Link>
+      <Link to="/cv/$id/build" params={{ id: cv.id }} className="block">
+        <h3 className={`font-display text-xl mb-2 leading-snug truncate ${isEn ? "italic" : ""}`}>
+          {cv.title}
+        </h3>
+        <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+          {t("dash_card_updated")} {new Date(cv.updated_at).toLocaleDateString()}
+        </p>
+        <div className="mt-6 flex items-center justify-between text-xs">
+          <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
+          <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
+        </div>
+      </Link>
+    </div>
   );
 }
+
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   const { t, lang } = useLang();

@@ -154,6 +154,12 @@ export const STRINGS = {
     dash_untitled: "Untitled CV",
     dash_toast_created: "New CV created.",
     dash_lang_full: "Language preference saved.",
+    dash_card_delete: "Delete",
+    dash_delete_title: "Delete this CV?",
+    dash_delete_body: "This will permanently remove the CV and all its saved answers. This cannot be undone.",
+    dash_delete_cancel: "Cancel",
+    dash_delete_confirm: "Delete CV",
+    dash_toast_deleted: "CV deleted.",
   },
 
   ku: {
@@ -294,6 +300,12 @@ export const STRINGS = {
     dash_untitled: "سی‌ڤی بێ ناونیشان",
     dash_toast_created: "سی‌ڤی نوێ دروستکرا.",
     dash_lang_full: "هەڵبژاردنی زمان پاشەکەوت کرا.",
+    dash_card_delete: "سڕینەوە",
+    dash_delete_title: "ئەم سی‌ڤییە بسڕیتەوە؟",
+    dash_delete_body: "بە شێوەیەکی هەمیشەیی سی‌ڤی و هەموو وەڵامەکانی دەسڕدرێنەوە. ناتوانرێت بگەڕێنرێتەوە.",
+    dash_delete_cancel: "پاشگەزبوونەوە",
+    dash_delete_confirm: "سڕینەوەی سی‌ڤی",
+    dash_toast_deleted: "سی‌ڤی سڕایەوە.",
   },
 
   ar: {
@@ -434,6 +446,12 @@ export const STRINGS = {
     dash_untitled: "سيرة بدون عنوان",
     dash_toast_created: "أُنشئت سيرة جديدة.",
     dash_lang_full: "حُفظت لغتك المفضّلة.",
+    dash_card_delete: "حذف",
+    dash_delete_title: "حذف هذه السيرة؟",
+    dash_delete_body: "سيتم حذف السيرة وجميع إجاباتها المحفوظة نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    dash_delete_cancel: "إلغاء",
+    dash_delete_confirm: "حذف السيرة",
+    dash_toast_deleted: "تم حذف السيرة.",
   },
 } as const;
 
