@@ -12,10 +12,10 @@ export const Route = createFileRoute("/auth")({
   }),
   head: () => ({
     meta: [
-      { title: "Sign in · LocalCV" },
+      { title: "Sign in · Pîşe" },
       {
         name: "description",
-        content: "Sign in or create your LocalCV account to build trilingual, ATS-ready resumes.",
+        content: "Sign in or create your Pîşe account to build trilingual, ATS-ready resumes.",
       },
     ],
   }),
@@ -57,7 +57,7 @@ function AuthPage() {
     <div dir={dir} className={`min-h-screen bg-background grid lg:grid-cols-2 ${font}`}>
       <aside className="hidden lg:flex flex-col justify-between p-12 bg-foreground text-primary-foreground relative overflow-hidden">
         <Link to="/" className={`font-display text-2xl relative z-10 ${isEn ? "italic" : ""}`}>
-          LocalCV
+          Pîşe
         </Link>
         <div className="relative z-10">
           <p className="text-[10px] font-mono uppercase tracking-widest text-primary-foreground/60 mb-4">
@@ -83,7 +83,7 @@ function AuthPage() {
               to="/"
               className={`lg:hidden font-display text-2xl ${isEn ? "italic" : ""}`}
             >
-              LocalCV
+              Pîşe
             </Link>
             <div className="ms-auto">
               <LanguageSwitcher />
