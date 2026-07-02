@@ -80,14 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "LocalCV — Resumes built for Iraq & KRG" },
+      { title: "Pîşe — Resumes built for Iraq & KRG" },
       {
         name: "description",
         content:
           "Trilingual resume builder for Iraq and the Kurdistan Region. RTL/LTR layouts, regional fields, ATS-ready PDFs for NGOs and oil & gas employers.",
       },
-      { name: "author", content: "LocalCV" },
-      { property: "og:title", content: "LocalCV — Resumes built for Iraq & KRG" },
+      { name: "author", content: "Pîşe" },
+      { property: "og:title", content: "Pîşe — Resumes built for Iraq & KRG" },
       {
         property: "og:description",
         content:
@@ -95,10 +95,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "LocalCV — Resumes built for Iraq & KRG" },
-      { name: "description", content: "Iraqi CV Hub builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
-      { property: "og:description", content: "Iraqi CV Hub builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
-      { name: "twitter:description", content: "Iraqi CV Hub builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
+      { name: "twitter:title", content: "Pîşe — Resumes built for Iraq & KRG" },
+      { name: "description", content: "Pîşe builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
+      { property: "og:description", content: "Pîşe builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
+      { name: "twitter:description", content: "Pîşe builds professional, ATS-friendly resumes for the Iraqi and KRG job markets." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bec5ee65-efef-4951-8bf3-063317cd2b18/id-preview-37079e65--f73266ec-4003-4600-bc16-40285237730c.lovable.app-1781877805678.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bec5ee65-efef-4951-8bf3-063317cd2b18/id-preview-37079e65--f73266ec-4003-4600-bc16-40285237730c.lovable.app-1781877805678.png" },
     ],
