@@ -48,7 +48,7 @@
   --color-ring-offset-background: var(--background);
   --color-paper: var(--paper);
   --font-display: "Playfair Display", ui-serif, Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
   --font-arabic: "IBM Plex Sans Arabic", "IBM Plex Sans", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --ease-out-cv: cubic-bezier(0.32, 0.72, 0, 1);
@@ -103,4 +103,3 @@
     scroll-behavior: smooth;
   }
 }
-
