@@ -79,9 +79,9 @@ function Dashboard() {
     <div dir={dir} className={`min-h-screen bg-background ${font}`}>
       <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 py-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-          <Link to="/" className={`font-display text-xl font-bold tracking-tight truncate ${isEn ? "italic" : ""}`}>
+          <span className={`font-display text-xl font-bold tracking-tight truncate ${isEn ? "italic" : ""}`}>
             Pîşe
-          </Link>
+          </span>
           <div className="flex items-center gap-3 shrink-0">
             <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-widest text-muted-foreground truncate max-w-[200px]">
               {user.email ?? user.phone}
