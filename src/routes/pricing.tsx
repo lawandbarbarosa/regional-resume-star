@@ -14,8 +14,8 @@ import {
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing · LocalCV" },
-      { name: "description", content: "LocalCV pricing — free during launch, with planned lifetime access." },
+      { title: "Pricing · Pîşe" },
+      { name: "description", content: "Pîşe pricing — free during launch, with planned lifetime access." },
     ],
   }),
   component: PricingPage,
