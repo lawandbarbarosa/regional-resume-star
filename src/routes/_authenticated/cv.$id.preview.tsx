@@ -157,7 +157,11 @@ function PreviewPage() {
   return (
     <div dir={dir} className={`min-h-screen bg-background ${font}`}>
       <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40 print:hidden">
+<<<<<<< HEAD
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 flex-wrap">
+=======
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-3 flex-wrap">
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
           <button
             onClick={() => navigate({ to: "/cv/$id/build", params: { id } })}
             className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
@@ -165,11 +169,33 @@ function PreviewPage() {
             ← {w(lang, "preview_edit")}
           </button>
           <div className="flex-1" />
+<<<<<<< HEAD
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <LanguageSwitcher />
             <button
               onClick={() => setPanelOpen((v) => !v)}
               className="px-3 sm:px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+=======
+          <LanguageSwitcher />
+          <button
+            onClick={() => setPanelOpen((v) => !v)}
+            className="px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+          >
+            {panelOpen ? "×" : "⚙"} {w(lang, "cust_title")}
+          </button>
+          <button
+            onClick={regen}
+            disabled={busy}
+            className="px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper disabled:opacity-40"
+          >
+            {busy ? "…" : w(lang, "preview_regen")}
+          </button>
+          {outLangs.length > 1 && (
+            <select
+              value={printLang}
+              onChange={(e) => setPrintLang(e.target.value as CvLang)}
+              className="px-3 py-2 text-xs border border-border rounded-xs bg-paper"
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
             >
               {panelOpen ? "×" : "⚙"} {w(lang, "cust_title")}
             </button>
@@ -202,9 +228,15 @@ function PreviewPage() {
         </div>
       </header>
 
+<<<<<<< HEAD
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 print:p-0 print:max-w-none flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
         {panelOpen && (
           <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24 print:hidden">
+=======
+      <main className="max-w-7xl mx-auto px-6 py-8 print:p-0 print:max-w-none flex gap-6 items-start">
+        {panelOpen && (
+          <aside className="w-72 shrink-0 sticky top-24 print:hidden">
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
             <CustomizePanel lang={lang} cust={cust} setCust={setCust} />
           </aside>
         )}
@@ -298,7 +330,11 @@ function CustomizePanel({
   }
 
   return (
+<<<<<<< HEAD
     <div className="border border-border rounded-xs bg-paper p-4 max-h-[70vh] lg:max-h-[calc(100vh-8rem)] overflow-y-auto">
+=======
+    <div className="border border-border rounded-xs bg-paper p-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg">{w(lang, "cust_title")}</h3>
         <button
@@ -426,7 +462,11 @@ function CvRender({ template, cv, cust }: { template: TemplateId; cv: GeneratedC
   const header = <HeaderBlock template={template} cv={cv} />;
   if (template === "compact") {
     return (
+<<<<<<< HEAD
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-6">
+=======
+      <div className="grid grid-cols-[1fr_2fr] gap-6">
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
         <aside>
           {header}
           {cust.visible.skills && <SectionBlock which="skills" cv={cv} compact />}
@@ -570,4 +610,8 @@ function SectionBlock({ which, cv, compact }: { which: SectionKey; cv: Generated
     );
   }
   return null;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> f7cb680308fd96b45c07b7b07f10e0844d75e9ad
