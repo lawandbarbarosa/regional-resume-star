@@ -16,8 +16,8 @@ export const Route = createFileRoute("/faq")({
   }),
   head: () => ({
     meta: [
-      { title: "FAQ & Support · LocalCV" },
-      { name: "description", content: "Help center for LocalCV — languages, AI, PDF, pricing, and privacy." },
+      { title: "FAQ & Support · Pîşe" },
+      { name: "description", content: "Help center for Pîşe — languages, AI, PDF, pricing, and privacy." },
     ],
   }),
   component: FaqPage,
