@@ -396,7 +396,7 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
 
 function Slider({ label, min, max, step = 1, value, onChange, suffix }: { label: string; min: number; max: number; step?: number; value: number; onChange: (v: number) => void; suffix?: string }) {
   return (
-    <Field label={<span className="flex justify-between"><span>{label}</span><span className="text-foreground">{value}{suffix ?? ""}</span></span> as unknown as string}>
+    <Field label={<span className="flex justify-between"><span>{label}</span><span className="text-foreground">{value}{suffix ?? ""}</span></span>}>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full accent-foreground" />
     </Field>
   );
