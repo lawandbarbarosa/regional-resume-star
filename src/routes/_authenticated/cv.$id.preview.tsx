@@ -10,7 +10,7 @@ import type { CvLang, GeneratedByLang, GeneratedCV, TemplateId } from "@/lib/cv-
 import { generateCv } from "@/lib/cv-generate.functions";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/preview")({
-  head: () => ({ meta: [{ title: "Your CV · LocalCV" }] }),
+  head: () => ({ meta: [{ title: "Your CV · Pîşe" }] }),
   component: PreviewPage,
 });
 
