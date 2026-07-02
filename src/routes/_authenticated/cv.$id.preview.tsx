@@ -374,10 +374,10 @@ function CustomizePanel({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="mb-3">
-      <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{label}</label>
+      <div className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
       {children}
     </div>
   );
