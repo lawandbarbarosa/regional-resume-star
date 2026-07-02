@@ -10,7 +10,7 @@ export function MarketingFooter() {
     <footer className="px-6 py-20 max-w-7xl mx-auto w-full">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
         <div className="col-span-2">
-          <h4 className={`font-display text-2xl mb-6 ${isEn ? "italic" : ""}`}>LocalCV</h4>
+          <h4 className={`font-display text-2xl mb-6 ${isEn ? "italic" : ""}`}>Pîşe</h4>
           <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">{t("footer_about")}</p>
         </div>
         <div>
