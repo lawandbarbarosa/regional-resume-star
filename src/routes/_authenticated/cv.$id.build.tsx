@@ -8,7 +8,7 @@ import { w } from "@/lib/cv-wizard-strings";
 import { EMPTY_ANSWERS, type WizardAnswers } from "@/lib/cv-types";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/build")({
-  head: () => ({ meta: [{ title: "Build your CV · LocalCV" }] }),
+  head: () => ({ meta: [{ title: "Build your CV · Pîşe" }] }),
   component: BuildWizard,
 });
 
