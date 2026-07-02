@@ -6,10 +6,10 @@ import { PageHero, SectionEyebrow, SectionTitle, CtaBand } from "@/components/ma
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About · LocalCV" },
+      { title: "About · Pîşe" },
       {
         name: "description",
-        content: "Learn why LocalCV was built for the Iraqi and KRG job markets.",
+        content: "Learn why Pîşe was built for the Iraqi and KRG job markets.",
       },
     ],
   }),
