@@ -21,7 +21,7 @@ export function MarketingNav() {
       <div className="max-w-7xl mx-auto px-6 py-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="flex min-w-0 items-center gap-6 md:gap-8">
           <Link to="/" className="font-display text-xl font-bold tracking-tight truncate shrink-0">
-            LocalCV
+            Pîşe
           </Link>
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             {NAV_LINKS.map(({ to, key }) => {
