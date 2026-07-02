@@ -10,7 +10,7 @@ import { TEMPLATES, type TemplateId, type CvLang } from "@/lib/cv-types";
 import { generateCv } from "@/lib/cv-generate.functions";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/design")({
-  head: () => ({ meta: [{ title: "Design your CV · LocalCV" }] }),
+  head: () => ({ meta: [{ title: "Design your CV · Pîşe" }] }),
   component: DesignPicker,
 });
 
