@@ -8,13 +8,13 @@ import { CtaBand } from "@/components/marketing/PageHero";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "LocalCV — Resumes built for the Iraqi & KRG job market" },
+      { title: "Pîşe — Resumes built for the Iraqi & KRG job market" },
       {
         name: "description",
         content:
           "Trilingual resume builder for Iraq and Kurdistan. Instant LTR/RTL, regional civil-status & nationality fields, language proficiency grid, AI localization, ATS-friendly PDF for WhatsApp & Viber.",
       },
-      { property: "og:title", content: "LocalCV — Resumes for Iraq & KRG" },
+      { property: "og:title", content: "Pîşe — Resumes for Iraq & KRG" },
       {
         property: "og:description",
         content:
