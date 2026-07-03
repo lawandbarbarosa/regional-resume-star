@@ -176,11 +176,18 @@ function PreviewPage() {
 
       if (format === "jpg" || format === "png") {
         const mime = format === "jpg" ? "image/jpeg" : "image/png";
-        const dataUrl = canvas.toDataURL(mime, 0.95);
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, mime, 0.95),
+        );
+        if (!blob) throw new Error("Couldn't create image");
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = dataUrl;
+        a.href = url;
         a.download = `${safeName}_${activeLang}.${format}`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       } else {
         // PDF — slice canvas across A4 pages so nothing gets clipped and no
         // duplicate blank pages appear.
