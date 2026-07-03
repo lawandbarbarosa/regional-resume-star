@@ -107,7 +107,7 @@ function PreviewPage() {
     (async () => {
       const { data } = await supabase
         .from("cv_drafts")
-        .select("generated, template, output_languages")
+        .select("generated, template, output_languages, customization")
         .eq("cv_id", id)
         .maybeSingle();
       if (data) {
@@ -116,14 +116,37 @@ function PreviewPage() {
         const out = (data.output_languages ?? ["en", "ar"]) as CvLang[];
         setOutLangs(out);
         setActiveLang(out[0] ?? "en");
+        const dbCust = data.customization as Partial<Customization> | null;
+        if (dbCust) {
+          setCust({
+            ...DEFAULT_CUST,
+            ...dbCust,
+            visible: { ...DEFAULT_CUST.visible, ...(dbCust.visible ?? {}) },
+          });
+        } else {
+          // Nothing saved server-side yet — fall back to a prior local-only save
+          // (from before this was persisted to the account) so nobody loses work.
+          setCust(loadCust(id));
+        }
+      } else {
+        setCust(loadCust(id));
       }
-      setCust(loadCust(id));
       setLoading(false);
     })();
   }, [id]);
 
+  const custSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (!loading) localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    if (loading) return;
+    localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    if (custSaveTimer.current) clearTimeout(custSaveTimer.current);
+    custSaveTimer.current = setTimeout(() => {
+      supabase.from("cv_drafts").update({ customization: cust }).eq("cv_id", id);
+    }, 600);
+    return () => {
+      if (custSaveTimer.current) clearTimeout(custSaveTimer.current);
+    };
   }, [cust, id, loading]);
 
   async function regen() {
