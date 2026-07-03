@@ -19,7 +19,6 @@ export type Database = {
           answers: Json
           created_at: string
           current_step: number
-          customization: Json | null
           cv_id: string
           generated: Json | null
           id: string
@@ -32,7 +31,6 @@ export type Database = {
           answers?: Json
           created_at?: string
           current_step?: number
-          customization?: Json | null
           cv_id: string
           generated?: Json | null
           id?: string
@@ -45,7 +43,6 @@ export type Database = {
           answers?: Json
           created_at?: string
           current_step?: number
-          customization?: Json | null
           cv_id?: string
           generated?: Json | null
           id?: string

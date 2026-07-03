@@ -34,12 +34,7 @@ type CV = {
   title: string;
   language: "en" | "ku" | "ar";
   updated_at: string;
-  cv_drafts: { generated: unknown | null } | null;
 };
-
-function isReady(cv: CV): boolean {
-  return !!cv.cv_drafts?.generated;
-}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -54,7 +49,7 @@ function Dashboard() {
     (async () => {
       const [p, c] = await Promise.all([
         supabase.from("profiles").select("display_name, preferred_language").eq("id", user.id).maybeSingle(),
-        supabase.from("cvs").select("id, title, language, updated_at, cv_drafts(generated)").order("updated_at", { ascending: false }),
+        supabase.from("cvs").select("id, title, language, updated_at").order("updated_at", { ascending: false }),
       ]);
       setProfile(p.data);
       setCvs(c.data ?? []);
@@ -193,19 +188,13 @@ function CVCard({ cv, onDelete }: { cv: CV; onDelete: () => void | Promise<void>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      <Link
-        to={isReady(cv) ? "/cv/$id/preview" : "/cv/$id/build"}
-        params={{ id: cv.id }}
-        className="block"
-      >
+      <Link to="/cv/$id/build" params={{ id: cv.id }} className="block">
         <h3 className={`font-display text-xl mb-2 leading-snug truncate ${isEn ? "italic" : ""}`}>{cv.title}</h3>
         <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
           {t("dash_card_updated")} {new Date(cv.updated_at).toLocaleDateString()}
         </p>
         <div className="mt-6 flex items-center justify-between text-xs">
-          <span className="font-mono text-muted-foreground">
-            {isReady(cv) ? t("dash_card_ready") : t("dash_card_draft")}
-          </span>
+          <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
           <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
         </div>
       </Link>
