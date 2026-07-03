@@ -128,3 +128,91 @@ export const generateCv = createServerFn({ method: "POST" })
 
     return { ok: true, generated };
   });
+
+export const tailorCvForJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        cvId: z.string().uuid(),
+        languages: z.array(z.enum(["en", "ku", "ar"])).min(1).max(3),
+        jobDescription: z.string().min(20).max(6000),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: draft, error } = await supabase
+      .from("cv_drafts")
+      .select("answers")
+      .eq("cv_id", data.cvId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!draft) throw new Error("Draft not found");
+
+    const answers = draft.answers as WizardAnswers;
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const gateway = createLovableAiGatewayProvider(apiKey);
+    const model = gateway("google/gemini-3-flash-preview");
+
+    const generated: GeneratedByLang = {};
+    for (const lang of data.languages) {
+      const prompt = `You are a professional CV writer. Tailor the candidate's CV for the specific job below. Output ONLY in ${LANG_NAME[lang]}.
+
+TARGET JOB DESCRIPTION:
+"""
+${data.jobDescription}
+"""
+
+Tailoring rules:
+- Rewrite the summary to directly match the job's needs.
+- Reorder and rewrite experience bullets so the most relevant achievements come first; use keywords from the job description naturally.
+- Reorder skills so the ones matching the job appear first; you may add clearly-implied skills from the candidate's experience but do not invent unrelated ones.
+- Keep all facts truthful. Do not fabricate employers, degrees, or dates.
+- Preserve proper nouns; transliterate if needed.
+- Tone: confident, professional, regionally appropriate.
+
+Return a single JSON object EXACTLY in this shape (no markdown fences, no commentary):
+{
+  "fullName": string, "headline": string,
+  "contact": { "email": string, "phone": string, "city": string },
+  "meta": { "nationality": string, "civilStatus": string },
+  "summary": string,
+  "experience": [ { "role": string, "company": string, "dates": string, "bullets": [string] } ],
+  "education": [ { "degree": string, "school": string, "dates": string } ],
+  "skills": [string],
+  "languages": [ { "name": string, "level": string } ]
+}
+Use "" for unknown strings; arrays may be empty but must be present.
+
+Candidate raw answers (JSON):
+${JSON.stringify(answers, null, 2)}`;
+      try {
+        const { experimental_output } = await generateText({
+          model,
+          experimental_output: Output.object({ schema: cvSchema }),
+          prompt,
+        });
+        generated[lang] = experimental_output as GeneratedByLang[CvLang];
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("402")) throw new Error("AI credits exhausted. Please add credits in workspace billing.");
+        if (msg.includes("429")) throw new Error("AI rate limit reached. Please try again in a moment.");
+        throw e;
+      }
+    }
+
+    const { error: upErr } = await supabase
+      .from("cv_drafts")
+      .update({
+        generated: JSON.parse(JSON.stringify(generated)),
+        output_languages: data.languages,
+      })
+      .eq("cv_id", data.cvId)
+      .eq("user_id", userId);
+    if (upErr) throw new Error(upErr.message);
+
+    return { ok: true, generated };
+  });

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -7,7 +7,15 @@ import { useLang } from "@/i18n/LanguageProvider";
 import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import type { CvLang, GeneratedByLang, GeneratedCV, TemplateId } from "@/lib/cv-types";
-import { generateCv } from "@/lib/cv-generate.functions";
+import { generateCv, tailorCvForJob } from "@/lib/cv-generate.functions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/cv/$id/preview")({
   head: () => ({ meta: [{ title: "Your CV · Pîşe" }] }),
@@ -33,10 +41,10 @@ type Customization = {
   text: string;
   bg: string;
   fontId: string;
-  fontSize: number; // px
+  fontSize: number;
   lineHeight: number;
-  sectionGap: number; // px
-  padding: number; // px
+  sectionGap: number;
+  padding: number;
   headerAlign: "start" | "center" | "end";
   uppercaseHeadings: boolean;
   showDivider: boolean;
@@ -76,15 +84,24 @@ function PreviewPage() {
   const navigate = useNavigate();
   const { lang, dir, font } = useLang();
   const callGenerate = useServerFn(generateCv);
+  const callTailor = useServerFn(tailorCvForJob);
 
   const [generated, setGenerated] = useState<GeneratedByLang | null>(null);
   const [template, setTemplate] = useState<TemplateId>("classic");
   const [outLangs, setOutLangs] = useState<CvLang[]>(["en", "ar"]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [printLang, setPrintLang] = useState<CvLang>("en");
+  const [activeLang, setActiveLang] = useState<CvLang>("en");
   const [cust, setCust] = useState<Customization>(DEFAULT_CUST);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [downloading, setDownloading] = useState<null | "pdf" | "jpg" | "png">(null);
+  const [waOpen, setWaOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [tailorOpen, setTailorOpen] = useState(false);
+  const [tailorText, setTailorText] = useState("");
+  const [tailorBusy, setTailorBusy] = useState(false);
+
+  const sheetRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     (async () => {
@@ -98,7 +115,7 @@ function PreviewPage() {
         setTemplate((data.template as TemplateId) ?? "classic");
         const out = (data.output_languages ?? ["en", "ar"]) as CvLang[];
         setOutLangs(out);
-        setPrintLang(out[0] ?? "en");
+        setActiveLang(out[0] ?? "en");
       }
       setCust(loadCust(id));
       setLoading(false);
@@ -122,9 +139,127 @@ function PreviewPage() {
     }
   }
 
-  function doPrint() {
-    document.documentElement.dataset.printLang = printLang;
-    window.print();
+  async function saveCv() {
+    try {
+      const { error } = await supabase
+        .from("cvs")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+      // Also persist customization in the draft (jsonb) so it follows the CV
+      // across devices via localStorage fallback (already saved above).
+      toast.success(w(lang, "toast_cv_saved"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function doDownload(format: "pdf" | "jpg" | "png") {
+    const node = sheetRefs.current[activeLang];
+    if (!node) return;
+    setDownloading(format);
+    try {
+      const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: cust.bg,
+        logging: false,
+      });
+      const safeName = (generated?.[activeLang]?.fullName || "cv")
+        .replace(/[^\p{L}\p{N}\-_ ]/gu, "")
+        .trim()
+        .replace(/\s+/g, "_") || "cv";
+
+      if (format === "jpg" || format === "png") {
+        const mime = format === "jpg" ? "image/jpeg" : "image/png";
+        const dataUrl = canvas.toDataURL(mime, 0.95);
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${safeName}_${activeLang}.${format}`;
+        a.click();
+      } else {
+        // PDF — slice canvas across A4 pages so nothing gets clipped and no
+        // duplicate blank pages appear.
+        const pdf = new jsPDFMod.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = (canvas.height * imgW) / canvas.width;
+
+        if (imgH <= pageH) {
+          pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+        } else {
+          const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
+          let y = 0;
+          let first = true;
+          while (y < canvas.height) {
+            const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
+            const slice = document.createElement("canvas");
+            slice.width = canvas.width;
+            slice.height = sliceHeight;
+            const ctx = slice.getContext("2d");
+            if (!ctx) break;
+            ctx.fillStyle = cust.bg;
+            ctx.fillRect(0, 0, slice.width, slice.height);
+            ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+            const sliceImgH = (sliceHeight * imgW) / canvas.width;
+            if (!first) pdf.addPage();
+            pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
+            first = false;
+            y += sliceHeight;
+          }
+        }
+        pdf.save(`${safeName}_${activeLang}.pdf`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  function buildShareText() {
+    const cv = generated?.[activeLang];
+    if (!cv) return "";
+    const lines: string[] = [];
+    lines.push(`${cv.fullName} — ${cv.headline}`);
+    const contact = [cv.contact.email, cv.contact.phone, cv.contact.city].filter(Boolean).join(" · ");
+    if (contact) lines.push(contact);
+    if (cv.summary) lines.push("", cv.summary);
+    if (cv.experience.length) {
+      lines.push("", "Experience:");
+      cv.experience.forEach((j) => {
+        lines.push(`• ${j.role} — ${j.company} (${j.dates})`);
+        j.bullets.slice(0, 3).forEach((b) => lines.push(`   - ${b}`));
+      });
+    }
+    if (cv.skills.length) lines.push("", `Skills: ${cv.skills.join(", ")}`);
+    return lines.join("\n");
+  }
+
+  async function runTailor() {
+    if (tailorText.trim().length < 20) {
+      toast.error("Please paste a longer job description.");
+      return;
+    }
+    setTailorBusy(true);
+    try {
+      const res = await callTailor({
+        data: { cvId: id, languages: outLangs, jobDescription: tailorText.trim() },
+      });
+      setGenerated(res.generated);
+      setTailorOpen(false);
+      setTailorText("");
+      toast.success(w(lang, "toast_generated"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setTailorBusy(false);
+    }
   }
 
   const fontCss = useMemo(
@@ -156,34 +291,52 @@ function PreviewPage() {
 
   return (
     <div dir={dir} className={`min-h-screen bg-background ${font}`}>
-      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 flex-wrap">
+      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 flex-wrap">
+          <button
+            onClick={() => navigate({ to: "/dashboard" })}
+            className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
+            ← {w(lang, "back_dashboard")}
+          </button>
           <button
             onClick={() => navigate({ to: "/cv/$id/build", params: { id } })}
             className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
           >
-            ← {w(lang, "preview_edit")}
+            {w(lang, "preview_edit")}
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <LanguageSwitcher />
             <button
               onClick={() => setPanelOpen((v) => !v)}
-              className="px-3 sm:px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+              className="px-3 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
             >
-              {panelOpen ? "×" : "⚙"} {w(lang, "cust_title")}
+              ⚙ {w(lang, "cust_title")}
+            </button>
+            <button
+              onClick={() => setTailorOpen(true)}
+              className="px-3 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+            >
+              🎯 {w(lang, "tailor_run")}
             </button>
             <button
               onClick={regen}
               disabled={busy}
-              className="px-3 sm:px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper disabled:opacity-40"
+              className="px-3 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper disabled:opacity-40"
             >
               {busy ? "…" : w(lang, "preview_regen")}
             </button>
+            <button
+              onClick={saveCv}
+              className="px-3 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+            >
+              💾 {w(lang, "save_cv")}
+            </button>
             {outLangs.length > 1 && (
               <select
-                value={printLang}
-                onChange={(e) => setPrintLang(e.target.value as CvLang)}
+                value={activeLang}
+                onChange={(e) => setActiveLang(e.target.value as CvLang)}
                 className="px-3 py-2 text-xs border border-border rounded-xs bg-paper"
               >
                 {outLangs.map((l) => (
@@ -191,20 +344,58 @@ function PreviewPage() {
                 ))}
               </select>
             )}
-            <button
-              onClick={doPrint}
-              disabled={!generated}
-              className="px-4 sm:px-5 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
-            >
-              {w(lang, "preview_download")}
-            </button>
+            <div className="flex items-stretch border border-border rounded-xs overflow-hidden">
+              <span className="px-2 py-2 text-[10px] font-mono uppercase tracking-widest bg-paper text-muted-foreground">
+                {w(lang, "download")}
+              </span>
+              <button
+                onClick={() => doDownload("pdf")}
+                disabled={!generated || downloading !== null}
+                className="px-3 py-2 text-xs font-semibold bg-foreground text-primary-foreground hover:bg-foreground/90 disabled:opacity-40"
+              >
+                {downloading === "pdf" ? "…" : w(lang, "download_pdf")}
+              </button>
+              <button
+                onClick={() => doDownload("jpg")}
+                disabled={!generated || downloading !== null}
+                className="px-3 py-2 text-xs font-semibold border-s border-border hover:bg-paper disabled:opacity-40"
+              >
+                {downloading === "jpg" ? "…" : w(lang, "download_jpg")}
+              </button>
+              <button
+                onClick={() => doDownload("png")}
+                disabled={!generated || downloading !== null}
+                className="px-3 py-2 text-xs font-semibold border-s border-border hover:bg-paper disabled:opacity-40"
+              >
+                {downloading === "png" ? "…" : w(lang, "download_png")}
+              </button>
+            </div>
+            <div className="flex items-stretch border border-border rounded-xs overflow-hidden">
+              <span className="px-2 py-2 text-[10px] font-mono uppercase tracking-widest bg-paper text-muted-foreground">
+                {w(lang, "share")}
+              </span>
+              <button
+                onClick={() => setWaOpen(true)}
+                disabled={!generated}
+                className="px-3 py-2 text-xs font-semibold hover:bg-paper disabled:opacity-40"
+              >
+                {w(lang, "share_whatsapp")}
+              </button>
+              <button
+                onClick={() => setEmailOpen(true)}
+                disabled={!generated}
+                className="px-3 py-2 text-xs font-semibold border-s border-border hover:bg-paper disabled:opacity-40"
+              >
+                {w(lang, "share_email")}
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 print:p-0 print:max-w-none flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-6 items-stretch lg:items-start">
         {panelOpen && (
-          <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24 print:hidden">
+          <aside className="w-full lg:w-72 lg:shrink-0 lg:sticky lg:top-24">
             <CustomizePanel lang={lang} cust={cust} setCust={setCust} />
           </aside>
         )}
@@ -213,13 +404,14 @@ function PreviewPage() {
           {!generated ? (
             <div className="text-center py-20 text-muted-foreground">{w(lang, "preview_empty")}</div>
           ) : (
-            <div className={`grid gap-6 print:block ${outLangs.length > 1 && !panelOpen ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+            <div className="grid gap-6 grid-cols-1">
               {outLangs.map((l) => {
                 const cv = generated[l];
                 if (!cv) return null;
                 return (
                   <div
                     key={l}
+                    ref={(el) => { sheetRefs.current[l] = el; }}
                     data-cv-lang={l}
                     className={`cv-sheet shadow-sm ${LANG_FONT[l]}`}
                     dir={LANG_DIR[l]}
@@ -233,6 +425,53 @@ function PreviewPage() {
           )}
         </div>
       </main>
+
+      {/* WhatsApp dialog */}
+      <ShareWhatsappDialog
+        open={waOpen}
+        onOpenChange={setWaOpen}
+        lang={lang}
+        defaultMessage={buildShareText()}
+      />
+      {/* Email dialog */}
+      <ShareEmailDialog
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        lang={lang}
+        fullName={generated?.[activeLang]?.fullName || ""}
+        defaultBody={buildShareText()}
+      />
+      {/* Tailor dialog */}
+      <Dialog open={tailorOpen} onOpenChange={setTailorOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{w(lang, "tailor_title")}</DialogTitle>
+            <DialogDescription>{w(lang, "tailor_sub")}</DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={tailorText}
+            onChange={(e) => setTailorText(e.target.value)}
+            placeholder={w(lang, "tailor_ph")}
+            rows={10}
+            className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background resize-y"
+          />
+          <DialogFooter>
+            <button
+              onClick={() => setTailorOpen(false)}
+              className="px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+            >
+              {w(lang, "cancel")}
+            </button>
+            <button
+              onClick={runTailor}
+              disabled={tailorBusy}
+              className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
+            >
+              {tailorBusy ? w(lang, "tailor_running") : w(lang, "tailor_run")}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <style>{`
         .cv-sheet {
@@ -261,17 +500,176 @@ function PreviewPage() {
         .cv-sheet .cv-accent { color: var(--cv-accent); }
         .cv-sheet .cv-accent-bg { background: var(--cv-accent); }
         .cv-sheet a { color: inherit; }
-        @media print {
-          @page { size: A4; margin: 0; }
-          body { background: white; }
-          .cv-sheet { box-shadow: none; margin: 0; max-width: none; min-height: auto; }
-          [data-cv-lang] { display: none; }
-          html[data-print-lang="en"] [data-cv-lang="en"],
-          html[data-print-lang="ku"] [data-cv-lang="ku"],
-          html[data-print-lang="ar"] [data-cv-lang="ar"] { display: block; page-break-after: always; }
-        }
       `}</style>
     </div>
+  );
+}
+
+/* ---------------- share dialogs ---------------- */
+
+function ShareWhatsappDialog({
+  open,
+  onOpenChange,
+  lang,
+  defaultMessage,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  lang: ReturnType<typeof useLang>["lang"];
+  defaultMessage: string;
+}) {
+  const [phone, setPhone] = useState("");
+  const [msg, setMsg] = useState(defaultMessage);
+  useEffect(() => { if (open) setMsg(defaultMessage); }, [open, defaultMessage]);
+
+  function send() {
+    const clean = phone.replace(/[^\d]/g, "");
+    if (!clean) return;
+    const url = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{w(lang, "wa_title")}</DialogTitle>
+          <DialogDescription>{w(lang, "wa_sub")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              {w(lang, "wa_phone")}
+            </label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="9647500000000"
+              className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              {w(lang, "wa_msg")}
+            </label>
+            <textarea
+              value={msg}
+              onChange={(e) => setMsg(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+          >
+            {w(lang, "cancel")}
+          </button>
+          <button
+            onClick={send}
+            disabled={!phone.trim()}
+            className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
+          >
+            {w(lang, "wa_send")}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ShareEmailDialog({
+  open,
+  onOpenChange,
+  lang,
+  fullName,
+  defaultBody,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  lang: ReturnType<typeof useLang>["lang"];
+  fullName: string;
+  defaultBody: string;
+}) {
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState(fullName ? `CV — ${fullName}` : "CV");
+  const [body, setBody] = useState(defaultBody);
+  useEffect(() => {
+    if (open) {
+      setSubject(fullName ? `CV — ${fullName}` : "CV");
+      setBody(defaultBody);
+    }
+  }, [open, fullName, defaultBody]);
+
+  function send() {
+    if (!to.trim()) return;
+    const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = href;
+    onOpenChange(false);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{w(lang, "email_title")}</DialogTitle>
+          <DialogDescription>{w(lang, "email_sub")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              {w(lang, "email_to")}
+            </label>
+            <input
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              type="email"
+              placeholder="hr@company.com"
+              className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              {w(lang, "email_subject")}
+            </label>
+            <input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+              {w(lang, "email_body")}
+            </label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="px-4 py-2 text-xs font-semibold border border-border rounded-xs hover:bg-paper"
+          >
+            {w(lang, "cancel")}
+          </button>
+          <button
+            onClick={send}
+            disabled={!to.trim()}
+            className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
+          >
+            {w(lang, "email_send")}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -334,7 +732,7 @@ function CustomizePanel({
             <button
               key={a}
               onClick={() => setCust((c) => ({ ...c, headerAlign: a }))}
-              className={`px-2 py-1.5 text-xs border rounded-xs ${cust.headerAlign === a ? "border-foreground bg-foreground text-primary-foreground" : "border-border bg-background"}`}
+              className={`min-w-0 px-1.5 py-1.5 text-[11px] leading-tight text-center break-words border rounded-xs ${cust.headerAlign === a ? "border-foreground bg-foreground text-primary-foreground" : "border-border bg-background"}`}
             >
               {w(lang, `cust_align_${a}`)}
             </button>
@@ -350,7 +748,7 @@ function CustomizePanel({
         <div className="space-y-1">
           {cust.order.map((k, i) => (
             <div key={k} className="flex items-center gap-1 border border-border rounded-xs bg-background px-2 py-1.5">
-              <span className="text-xs flex-1 capitalize">{k}</span>
+              <span className="text-xs flex-1 capitalize truncate">{k}</span>
               <button
                 onClick={() => setCust((c) => ({ ...c, visible: { ...c.visible, [k]: !c.visible[k] } }))}
                 className="text-[10px] px-1.5 py-0.5 border border-border rounded-xs hover:bg-paper"
@@ -390,7 +788,7 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
     <Field label={label}>
       <div className="flex gap-2 items-center">
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="h-8 w-10 rounded-xs border border-border bg-transparent cursor-pointer" />
-        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 px-2 py-1.5 text-xs border border-border rounded-xs bg-background font-mono" />
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-border rounded-xs bg-background font-mono" />
       </div>
     </Field>
   );
