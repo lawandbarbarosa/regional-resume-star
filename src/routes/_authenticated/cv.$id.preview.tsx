@@ -160,7 +160,7 @@ function PreviewPage() {
     setDownloading(format);
     try {
       const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
-        import("html2canvas"),
+        import("html2canvas-pro"),
         import("jspdf"),
       ]);
       const canvas = await html2canvas(node, {
