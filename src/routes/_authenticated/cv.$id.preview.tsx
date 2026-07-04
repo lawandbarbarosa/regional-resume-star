@@ -107,7 +107,7 @@ function PreviewPage() {
     (async () => {
       const { data } = await supabase
         .from("cv_drafts")
-        .select("generated, template, output_languages")
+        .select("generated, template, output_languages, customization")
         .eq("cv_id", id)
         .maybeSingle();
       if (data) {
@@ -116,14 +116,34 @@ function PreviewPage() {
         const out = (data.output_languages ?? ["en", "ar"]) as CvLang[];
         setOutLangs(out);
         setActiveLang(out[0] ?? "en");
+        const dbCust = (data as unknown as { customization: Partial<Customization> | null }).customization;
+        if (dbCust && typeof dbCust === "object") {
+          setCust({
+            ...DEFAULT_CUST,
+            ...dbCust,
+            visible: { ...DEFAULT_CUST.visible, ...(dbCust.visible ?? {}) },
+            order: (dbCust.order && dbCust.order.length ? dbCust.order : DEFAULT_ORDER) as SectionKey[],
+          });
+        } else {
+          setCust(loadCust(id));
+        }
       }
-      setCust(loadCust(id));
       setLoading(false);
     })();
   }, [id]);
 
+  // Debounced auto-save to DB (and mirror to localStorage as a fallback).
   useEffect(() => {
-    if (!loading) localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    if (loading) return;
+    localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    const t = setTimeout(() => {
+      supabase
+        .from("cv_drafts")
+        .update({ customization: cust as unknown as Record<string, unknown> })
+        .eq("cv_id", id)
+        .then(() => {});
+    }, 600);
+    return () => clearTimeout(t);
   }, [cust, id, loading]);
 
   async function regen() {
@@ -141,18 +161,21 @@ function PreviewPage() {
 
   async function saveCv() {
     try {
-      const { error } = await supabase
-        .from("cvs")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-      // Also persist customization in the draft (jsonb) so it follows the CV
-      // across devices via localStorage fallback (already saved above).
+      const [a, b] = await Promise.all([
+        supabase.from("cvs").update({ updated_at: new Date().toISOString() }).eq("id", id),
+        supabase
+          .from("cv_drafts")
+          .update({ customization: cust as unknown as Record<string, unknown> })
+          .eq("cv_id", id),
+      ]);
+      if (a.error) throw a.error;
+      if (b.error) throw b.error;
       toast.success(w(lang, "toast_cv_saved"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
+
 
   async function doDownload(format: "pdf" | "jpg" | "png") {
     const node = sheetRefs.current[activeLang];
