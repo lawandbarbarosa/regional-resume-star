@@ -34,6 +34,7 @@ type CV = {
   title: string;
   language: "en" | "ku" | "ar";
   updated_at: string;
+  has_generated?: boolean;
 };
 
 function Dashboard() {
@@ -47,15 +48,21 @@ function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [p, c] = await Promise.all([
+      const [p, c, d] = await Promise.all([
         supabase.from("profiles").select("display_name, preferred_language").eq("id", user.id).maybeSingle(),
         supabase.from("cvs").select("id, title, language, updated_at").order("updated_at", { ascending: false }),
+        supabase.from("cv_drafts").select("cv_id, generated"),
       ]);
+      const generatedSet = new Set(
+        (d.data ?? []).filter((r) => r.generated != null).map((r) => r.cv_id as string),
+      );
+      const rows = (c.data ?? []).map((cv) => ({ ...cv, has_generated: generatedSet.has(cv.id) }));
       setProfile(p.data);
-      setCvs(c.data ?? []);
+      setCvs(rows);
       setLoading(false);
     })();
   }, [user.id]);
+
 
   async function createCV() {
     const { data, error } = await supabase
@@ -188,16 +195,23 @@ function CVCard({ cv, onDelete }: { cv: CV; onDelete: () => void | Promise<void>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      <Link to="/cv/$id/build" params={{ id: cv.id }} className="block">
+      <Link
+        to={cv.has_generated ? "/cv/$id/preview" : "/cv/$id/build"}
+        params={{ id: cv.id }}
+        className="block"
+      >
         <h3 className={`font-display text-xl mb-2 leading-snug truncate ${isEn ? "italic" : ""}`}>{cv.title}</h3>
         <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
           {t("dash_card_updated")} {new Date(cv.updated_at).toLocaleDateString()}
         </p>
         <div className="mt-6 flex items-center justify-between text-xs">
-          <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
+          <span className="font-mono text-muted-foreground">
+            {cv.has_generated ? t("dash_card_ready") : t("dash_card_draft")}
+          </span>
           <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
         </div>
       </Link>
+
     </div>
   );
 }

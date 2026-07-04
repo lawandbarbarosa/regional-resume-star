@@ -107,7 +107,7 @@ function PreviewPage() {
     (async () => {
       const { data } = await supabase
         .from("cv_drafts")
-        .select("generated, template, output_languages")
+        .select("generated, template, output_languages, customization")
         .eq("cv_id", id)
         .maybeSingle();
       if (data) {
@@ -116,14 +116,34 @@ function PreviewPage() {
         const out = (data.output_languages ?? ["en", "ar"]) as CvLang[];
         setOutLangs(out);
         setActiveLang(out[0] ?? "en");
+        const dbCust = (data as unknown as { customization: Partial<Customization> | null }).customization;
+        if (dbCust && typeof dbCust === "object") {
+          setCust({
+            ...DEFAULT_CUST,
+            ...dbCust,
+            visible: { ...DEFAULT_CUST.visible, ...(dbCust.visible ?? {}) },
+            order: (dbCust.order && dbCust.order.length ? dbCust.order : DEFAULT_ORDER) as SectionKey[],
+          });
+        } else {
+          setCust(loadCust(id));
+        }
       }
-      setCust(loadCust(id));
       setLoading(false);
     })();
   }, [id]);
 
+  // Debounced auto-save to DB (and mirror to localStorage as a fallback).
   useEffect(() => {
-    if (!loading) localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    if (loading) return;
+    localStorage.setItem(`cv-cust-${id}`, JSON.stringify(cust));
+    const t = setTimeout(() => {
+      supabase
+        .from("cv_drafts")
+        .update({ customization: JSON.parse(JSON.stringify(cust)) })
+        .eq("cv_id", id)
+        .then(() => {});
+    }, 600);
+    return () => clearTimeout(t);
   }, [cust, id, loading]);
 
   async function regen() {
@@ -141,87 +161,98 @@ function PreviewPage() {
 
   async function saveCv() {
     try {
-      const { error } = await supabase
-        .from("cvs")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-      // Also persist customization in the draft (jsonb) so it follows the CV
-      // across devices via localStorage fallback (already saved above).
+      const [a, b] = await Promise.all([
+        supabase.from("cvs").update({ updated_at: new Date().toISOString() }).eq("id", id),
+        supabase
+          .from("cv_drafts")
+          .update({ customization: JSON.parse(JSON.stringify(cust)) })
+          .eq("cv_id", id),
+      ]);
+      if (a.error) throw a.error;
+      if (b.error) throw b.error;
       toast.success(w(lang, "toast_cv_saved"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
 
-  async function doDownload(format: "pdf" | "jpg" | "png") {
-    const node = sheetRefs.current[activeLang];
-    if (!node) return;
-    setDownloading(format);
-    try {
-      const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
-        import("html2canvas-pro"),
-        import("jspdf"),
-      ]);
-      const canvas = await html2canvas(node, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: cust.bg,
-        logging: false,
-      });
-      const safeName = (generated?.[activeLang]?.fullName || "cv")
+
+  function safeFileBase() {
+    return (
+      (generated?.[activeLang]?.fullName || "cv")
         .replace(/[^\p{L}\p{N}\-_ ]/gu, "")
         .trim()
-        .replace(/\s+/g, "_") || "cv";
+        .replace(/\s+/g, "_") || "cv"
+    );
+  }
 
-      if (format === "jpg" || format === "png") {
-        const mime = format === "jpg" ? "image/jpeg" : "image/png";
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, mime, 0.95),
-        );
-        if (!blob) throw new Error("Couldn't create image");
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${safeName}_${activeLang}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        // PDF — slice canvas across A4 pages so nothing gets clipped and no
-        // duplicate blank pages appear.
-        const pdf = new jsPDFMod.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgW = pageW;
-        const imgH = (canvas.height * imgW) / canvas.width;
+  async function renderBlob(format: "pdf" | "jpg" | "png"): Promise<{ blob: Blob; filename: string } | null> {
+    const node = sheetRefs.current[activeLang];
+    if (!node) return null;
+    const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
+      import("html2canvas-pro"),
+      import("jspdf"),
+    ]);
+    const canvas = await html2canvas(node, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: cust.bg,
+      logging: false,
+    });
+    const safeName = safeFileBase();
 
-        if (imgH <= pageH) {
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
-        } else {
-          const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
-          let y = 0;
-          let first = true;
-          while (y < canvas.height) {
-            const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
-            const slice = document.createElement("canvas");
-            slice.width = canvas.width;
-            slice.height = sliceHeight;
-            const ctx = slice.getContext("2d");
-            if (!ctx) break;
-            ctx.fillStyle = cust.bg;
-            ctx.fillRect(0, 0, slice.width, slice.height);
-            ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-            const sliceImgH = (sliceHeight * imgW) / canvas.width;
-            if (!first) pdf.addPage();
-            pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
-            first = false;
-            y += sliceHeight;
-          }
-        }
-        pdf.save(`${safeName}_${activeLang}.pdf`);
+    if (format === "jpg" || format === "png") {
+      const mime = format === "jpg" ? "image/jpeg" : "image/png";
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.95));
+      if (!blob) throw new Error("Couldn't create image");
+      return { blob, filename: `${safeName}_${activeLang}.${format}` };
+    }
+
+    const pdf = new jsPDFMod.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    if (imgH <= pageH) {
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+    } else {
+      const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
+      let y = 0;
+      let first = true;
+      while (y < canvas.height) {
+        const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
+        const slice = document.createElement("canvas");
+        slice.width = canvas.width;
+        slice.height = sliceHeight;
+        const ctx = slice.getContext("2d");
+        if (!ctx) break;
+        ctx.fillStyle = cust.bg;
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        const sliceImgH = (sliceHeight * imgW) / canvas.width;
+        if (!first) pdf.addPage();
+        pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
+        first = false;
+        y += sliceHeight;
       }
+    }
+    const blob = pdf.output("blob");
+    return { blob, filename: `${safeName}_${activeLang}.pdf` };
+  }
+
+  async function doDownload(format: "pdf" | "jpg" | "png") {
+    setDownloading(format);
+    try {
+      const out = await renderBlob(format);
+      if (!out) return;
+      const url = URL.createObjectURL(out.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = out.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
     } finally {
@@ -229,24 +260,12 @@ function PreviewPage() {
     }
   }
 
-  function buildShareText() {
+  function shortShareMessage() {
     const cv = generated?.[activeLang];
-    if (!cv) return "";
-    const lines: string[] = [];
-    lines.push(`${cv.fullName} — ${cv.headline}`);
-    const contact = [cv.contact.email, cv.contact.phone, cv.contact.city].filter(Boolean).join(" · ");
-    if (contact) lines.push(contact);
-    if (cv.summary) lines.push("", cv.summary);
-    if (cv.experience.length) {
-      lines.push("", "Experience:");
-      cv.experience.forEach((j) => {
-        lines.push(`• ${j.role} — ${j.company} (${j.dates})`);
-        j.bullets.slice(0, 3).forEach((b) => lines.push(`   - ${b}`));
-      });
-    }
-    if (cv.skills.length) lines.push("", `Skills: ${cv.skills.join(", ")}`);
-    return lines.join("\n");
+    const name = cv?.fullName || "";
+    return name ? `Hi, please find my CV attached. — ${name}` : "Hi, please find my CV attached.";
   }
+
 
   async function runTailor() {
     if (tailorText.trim().length < 20) {
@@ -438,7 +457,8 @@ function PreviewPage() {
         open={waOpen}
         onOpenChange={setWaOpen}
         lang={lang}
-        defaultMessage={buildShareText()}
+        defaultMessage={shortShareMessage()}
+        renderBlob={renderBlob}
       />
       {/* Email dialog */}
       <ShareEmailDialog
@@ -446,8 +466,10 @@ function PreviewPage() {
         onOpenChange={setEmailOpen}
         lang={lang}
         fullName={generated?.[activeLang]?.fullName || ""}
-        defaultBody={buildShareText()}
+        defaultBody={shortShareMessage()}
+        renderBlob={renderBlob}
       />
+
       {/* Tailor dialog */}
       <Dialog open={tailorOpen} onOpenChange={setTailorOpen}>
         <DialogContent className="max-w-lg">
@@ -514,27 +536,77 @@ function PreviewPage() {
 
 /* ---------------- share dialogs ---------------- */
 
+type ShareFormat = "pdf" | "jpg";
+type RenderBlob = (format: "pdf" | "jpg" | "png") => Promise<{ blob: Blob; filename: string } | null>;
+
+async function tryNativeShare(file: File, message: string, title: string): Promise<boolean> {
+  const nav = navigator as Navigator & {
+    canShare?: (d: { files?: File[] }) => boolean;
+    share?: (d: { files?: File[]; text?: string; title?: string }) => Promise<void>;
+  };
+  if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], text: message, title });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function ShareWhatsappDialog({
   open,
   onOpenChange,
   lang,
   defaultMessage,
+  renderBlob,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   defaultMessage: string;
+  renderBlob: RenderBlob;
 }) {
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState(defaultMessage);
+  const [format, setFormat] = useState<ShareFormat>("pdf");
+  const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setMsg(defaultMessage); }, [open, defaultMessage]);
 
-  function send() {
+  async function send() {
     const clean = phone.replace(/[^\d]/g, "");
     if (!clean) return;
-    const url = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    onOpenChange(false);
+    setBusy(true);
+    try {
+      const out = await renderBlob(format);
+      if (!out) throw new Error("Couldn't render CV");
+      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
+      const file = new File([out.blob], out.filename, { type: mime });
+      const shared = await tryNativeShare(file, msg, "CV");
+      if (!shared) {
+        downloadBlob(out.blob, out.filename);
+        toast.success("CV downloaded — attach it in the WhatsApp chat that opens.");
+        const url = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -556,6 +628,7 @@ function ShareWhatsappDialog({
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background font-mono"
             />
           </div>
+          <FormatPicker value={format} onChange={setFormat} />
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
               {w(lang, "wa_msg")}
@@ -563,7 +636,7 @@ function ShareWhatsappDialog({
             <textarea
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
-              rows={6}
+              rows={3}
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
@@ -577,10 +650,10 @@ function ShareWhatsappDialog({
           </button>
           <button
             onClick={send}
-            disabled={!phone.trim()}
+            disabled={!phone.trim() || busy}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
           >
-            {w(lang, "wa_send")}
+            {busy ? "…" : w(lang, "wa_send")}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -594,16 +667,20 @@ function ShareEmailDialog({
   lang,
   fullName,
   defaultBody,
+  renderBlob,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   fullName: string;
   defaultBody: string;
+  renderBlob: RenderBlob;
 }) {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState(fullName ? `CV — ${fullName}` : "CV");
   const [body, setBody] = useState(defaultBody);
+  const [format, setFormat] = useState<ShareFormat>("pdf");
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (open) {
       setSubject(fullName ? `CV — ${fullName}` : "CV");
@@ -611,11 +688,27 @@ function ShareEmailDialog({
     }
   }, [open, fullName, defaultBody]);
 
-  function send() {
+  async function send() {
     if (!to.trim()) return;
-    const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = href;
-    onOpenChange(false);
+    setBusy(true);
+    try {
+      const out = await renderBlob(format);
+      if (!out) throw new Error("Couldn't render CV");
+      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
+      const file = new File([out.blob], out.filename, { type: mime });
+      const shared = await tryNativeShare(file, body, subject);
+      if (!shared) {
+        downloadBlob(out.blob, out.filename);
+        toast.success("CV downloaded — attach it in the email that opens.");
+        const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = href;
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -648,6 +741,7 @@ function ShareEmailDialog({
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
+          <FormatPicker value={format} onChange={setFormat} />
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
               {w(lang, "email_body")}
@@ -655,7 +749,7 @@ function ShareEmailDialog({
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={6}
+              rows={3}
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
@@ -669,16 +763,38 @@ function ShareEmailDialog({
           </button>
           <button
             onClick={send}
-            disabled={!to.trim()}
+            disabled={!to.trim() || busy}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
           >
-            {w(lang, "email_send")}
+            {busy ? "…" : w(lang, "email_send")}
           </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+function FormatPicker({ value, onChange }: { value: ShareFormat; onChange: (v: ShareFormat) => void }) {
+  return (
+    <div>
+      <div className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+        Attach as
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {(["pdf", "jpg"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => onChange(f)}
+            className={`px-3 py-2 text-xs font-semibold border rounded-xs ${value === f ? "border-foreground bg-foreground text-primary-foreground" : "border-border bg-background"}`}
+          >
+            {f.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------------- customize panel ---------------- */
 

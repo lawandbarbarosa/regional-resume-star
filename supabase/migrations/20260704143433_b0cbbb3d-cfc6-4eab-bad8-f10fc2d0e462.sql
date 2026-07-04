@@ -1,0 +1,1 @@
+ALTER TABLE public.cv_drafts ADD COLUMN IF NOT EXISTS customization jsonb;
