@@ -457,7 +457,8 @@ function PreviewPage() {
         open={waOpen}
         onOpenChange={setWaOpen}
         lang={lang}
-        defaultMessage={buildShareText()}
+        defaultMessage={shortShareMessage()}
+        renderBlob={renderBlob}
       />
       {/* Email dialog */}
       <ShareEmailDialog
@@ -465,8 +466,10 @@ function PreviewPage() {
         onOpenChange={setEmailOpen}
         lang={lang}
         fullName={generated?.[activeLang]?.fullName || ""}
-        defaultBody={buildShareText()}
+        defaultBody={shortShareMessage()}
+        renderBlob={renderBlob}
       />
+
       {/* Tailor dialog */}
       <Dialog open={tailorOpen} onOpenChange={setTailorOpen}>
         <DialogContent className="max-w-lg">
