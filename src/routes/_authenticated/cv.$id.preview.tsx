@@ -139,7 +139,7 @@ function PreviewPage() {
     const t = setTimeout(() => {
       supabase
         .from("cv_drafts")
-        .update({ customization: cust as unknown as Record<string, unknown> })
+        .update({ customization: JSON.parse(JSON.stringify(cust)) })
         .eq("cv_id", id)
         .then(() => {});
     }, 600);
@@ -165,7 +165,7 @@ function PreviewPage() {
         supabase.from("cvs").update({ updated_at: new Date().toISOString() }).eq("id", id),
         supabase
           .from("cv_drafts")
-          .update({ customization: cust as unknown as Record<string, unknown> })
+          .update({ customization: JSON.parse(JSON.stringify(cust)) })
           .eq("cv_id", id),
       ]);
       if (a.error) throw a.error;
