@@ -47,6 +47,10 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-paper: var(--paper);
+  --color-brand-green: var(--brand-green);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-gold: var(--brand-gold);
   --font-display: "Playfair Display", ui-serif, Georgia, serif;
   --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
   --font-arabic: "IBM Plex Sans Arabic", "IBM Plex Sans", ui-sans-serif, sans-serif;
@@ -56,27 +60,40 @@
 
 :root {
   --radius: 0.25rem;
-  /* Documentarian palette: warm parchment background, ink foreground, deep emerald accent */
-  --background: oklch(0.965 0.018 80);
-  --foreground: oklch(0.22 0.02 240);
-  --muted: oklch(0.92 0.015 80);
-  --muted-foreground: oklch(0.50 0.02 240);
-  --paper: oklch(0.995 0.005 80);
+  /*
+   * Pîşe brand palette (source hex, converted to oklch below):
+   *   #102326 ink        #414047 charcoal     #FBFAF9 paper
+   *   #46B276 brand green #266FF2 brand blue   #7939CC brand purple  #FFCA05 brand gold
+   *
+   * --accent is a deepened working shade of the brand green (same hue/chroma,
+   * lower lightness) so it stays legible as small text and icons on the light
+   * background — the true, brighter #46B276 is kept available as --brand-green
+   * for badges, fills and illustration work where strict text contrast doesn't apply.
+   */
+  --background: oklch(0.955 0.004 68);
+  --foreground: oklch(0.241 0.025 209);
+  --muted: oklch(0.91 0.006 68);
+  --muted-foreground: oklch(0.375 0.012 292);
+  --paper: oklch(0.986 0.002 68);
   --card: var(--paper);
   --card-foreground: var(--foreground);
   --popover: var(--paper);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--paper);
-  --secondary: oklch(0.92 0.015 80);
+  --secondary: oklch(0.91 0.006 68);
   --secondary-foreground: var(--foreground);
-  --accent: oklch(0.42 0.06 155);
+  --accent: oklch(0.505 0.128 154);
   --accent-foreground: var(--paper);
   --destructive: oklch(0.55 0.20 27);
   --destructive-foreground: var(--paper);
-  --border: oklch(0.22 0.02 240 / 0.12);
-  --input: oklch(0.22 0.02 240 / 0.12);
-  --ring: oklch(0.42 0.06 155);
+  --border: oklch(0.241 0.025 209 / 0.12);
+  --input: oklch(0.241 0.025 209 / 0.12);
+  --ring: var(--accent);
+  --brand-green: oklch(0.685 0.134 156);
+  --brand-blue: oklch(0.576 0.210 261);
+  --brand-purple: oklch(0.509 0.213 298);
+  --brand-gold: oklch(0.861 0.175 89);
 }
 
 @keyframes slide-up-cv {
