@@ -195,16 +195,23 @@ function CVCard({ cv, onDelete }: { cv: CV; onDelete: () => void | Promise<void>
           </AlertDialogContent>
         </AlertDialog>
       </div>
-      <Link to="/cv/$id/build" params={{ id: cv.id }} className="block">
+      <Link
+        to={cv.has_generated ? "/cv/$id/preview" : "/cv/$id/build"}
+        params={{ id: cv.id }}
+        className="block"
+      >
         <h3 className={`font-display text-xl mb-2 leading-snug truncate ${isEn ? "italic" : ""}`}>{cv.title}</h3>
         <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
           {t("dash_card_updated")} {new Date(cv.updated_at).toLocaleDateString()}
         </p>
         <div className="mt-6 flex items-center justify-between text-xs">
-          <span className="font-mono text-muted-foreground">{t("dash_card_draft")}</span>
+          <span className="font-mono text-muted-foreground">
+            {cv.has_generated ? t("dash_card_ready") : t("dash_card_draft")}
+          </span>
           <span className="text-accent font-semibold group-hover:underline">{t("dash_card_open")}</span>
         </div>
       </Link>
+
     </div>
   );
 }
