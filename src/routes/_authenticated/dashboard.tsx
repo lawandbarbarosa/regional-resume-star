@@ -34,6 +34,7 @@ type CV = {
   title: string;
   language: "en" | "ku" | "ar";
   updated_at: string;
+  has_generated?: boolean;
 };
 
 function Dashboard() {
@@ -47,15 +48,21 @@ function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [p, c] = await Promise.all([
+      const [p, c, d] = await Promise.all([
         supabase.from("profiles").select("display_name, preferred_language").eq("id", user.id).maybeSingle(),
         supabase.from("cvs").select("id, title, language, updated_at").order("updated_at", { ascending: false }),
+        supabase.from("cv_drafts").select("cv_id, generated"),
       ]);
+      const generatedSet = new Set(
+        (d.data ?? []).filter((r) => r.generated != null).map((r) => r.cv_id as string),
+      );
+      const rows = (c.data ?? []).map((cv) => ({ ...cv, has_generated: generatedSet.has(cv.id) }));
       setProfile(p.data);
-      setCvs(c.data ?? []);
+      setCvs(rows);
       setLoading(false);
     })();
   }, [user.id]);
+
 
   async function createCV() {
     const { data, error } = await supabase
