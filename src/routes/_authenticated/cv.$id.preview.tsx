@@ -536,27 +536,77 @@ function PreviewPage() {
 
 /* ---------------- share dialogs ---------------- */
 
+type ShareFormat = "pdf" | "jpg";
+type RenderBlob = (format: "pdf" | "jpg" | "png") => Promise<{ blob: Blob; filename: string } | null>;
+
+async function tryNativeShare(file: File, message: string, title: string): Promise<boolean> {
+  const nav = navigator as Navigator & {
+    canShare?: (d: { files?: File[] }) => boolean;
+    share?: (d: { files?: File[]; text?: string; title?: string }) => Promise<void>;
+  };
+  if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], text: message, title });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function ShareWhatsappDialog({
   open,
   onOpenChange,
   lang,
   defaultMessage,
+  renderBlob,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   defaultMessage: string;
+  renderBlob: RenderBlob;
 }) {
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState(defaultMessage);
+  const [format, setFormat] = useState<ShareFormat>("pdf");
+  const [busy, setBusy] = useState(false);
   useEffect(() => { if (open) setMsg(defaultMessage); }, [open, defaultMessage]);
 
-  function send() {
+  async function send() {
     const clean = phone.replace(/[^\d]/g, "");
     if (!clean) return;
-    const url = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    onOpenChange(false);
+    setBusy(true);
+    try {
+      const out = await renderBlob(format);
+      if (!out) throw new Error("Couldn't render CV");
+      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
+      const file = new File([out.blob], out.filename, { type: mime });
+      const shared = await tryNativeShare(file, msg, "CV");
+      if (!shared) {
+        downloadBlob(out.blob, out.filename);
+        toast.success("CV downloaded — attach it in the WhatsApp chat that opens.");
+        const url = `https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -578,6 +628,7 @@ function ShareWhatsappDialog({
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background font-mono"
             />
           </div>
+          <FormatPicker value={format} onChange={setFormat} />
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
               {w(lang, "wa_msg")}
@@ -585,7 +636,7 @@ function ShareWhatsappDialog({
             <textarea
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
-              rows={6}
+              rows={3}
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
@@ -599,10 +650,10 @@ function ShareWhatsappDialog({
           </button>
           <button
             onClick={send}
-            disabled={!phone.trim()}
+            disabled={!phone.trim() || busy}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
           >
-            {w(lang, "wa_send")}
+            {busy ? "…" : w(lang, "wa_send")}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -616,16 +667,20 @@ function ShareEmailDialog({
   lang,
   fullName,
   defaultBody,
+  renderBlob,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   fullName: string;
   defaultBody: string;
+  renderBlob: RenderBlob;
 }) {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState(fullName ? `CV — ${fullName}` : "CV");
   const [body, setBody] = useState(defaultBody);
+  const [format, setFormat] = useState<ShareFormat>("pdf");
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (open) {
       setSubject(fullName ? `CV — ${fullName}` : "CV");
@@ -633,11 +688,27 @@ function ShareEmailDialog({
     }
   }, [open, fullName, defaultBody]);
 
-  function send() {
+  async function send() {
     if (!to.trim()) return;
-    const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = href;
-    onOpenChange(false);
+    setBusy(true);
+    try {
+      const out = await renderBlob(format);
+      if (!out) throw new Error("Couldn't render CV");
+      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
+      const file = new File([out.blob], out.filename, { type: mime });
+      const shared = await tryNativeShare(file, body, subject);
+      if (!shared) {
+        downloadBlob(out.blob, out.filename);
+        toast.success("CV downloaded — attach it in the email that opens.");
+        const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = href;
+      }
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -670,6 +741,7 @@ function ShareEmailDialog({
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
+          <FormatPicker value={format} onChange={setFormat} />
           <div>
             <label className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
               {w(lang, "email_body")}
@@ -677,7 +749,7 @@ function ShareEmailDialog({
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={6}
+              rows={3}
               className="w-full px-3 py-2 text-sm border border-border rounded-xs bg-background"
             />
           </div>
@@ -691,16 +763,38 @@ function ShareEmailDialog({
           </button>
           <button
             onClick={send}
-            disabled={!to.trim()}
+            disabled={!to.trim() || busy}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-primary-foreground rounded-xs hover:bg-foreground/90 disabled:opacity-40"
           >
-            {w(lang, "email_send")}
+            {busy ? "…" : w(lang, "email_send")}
           </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+function FormatPicker({ value, onChange }: { value: ShareFormat; onChange: (v: ShareFormat) => void }) {
+  return (
+    <div>
+      <div className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+        Attach as
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {(["pdf", "jpg"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => onChange(f)}
+            className={`px-3 py-2 text-xs font-semibold border rounded-xs ${value === f ? "border-foreground bg-foreground text-primary-foreground" : "border-border bg-background"}`}
+          >
+            {f.toUpperCase()}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------------- customize panel ---------------- */
 
