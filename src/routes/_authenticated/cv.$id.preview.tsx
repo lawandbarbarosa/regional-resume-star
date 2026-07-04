@@ -53,7 +53,7 @@ type Customization = {
 };
 
 const DEFAULT_CUST: Customization = {
-  accent: "#0f766e",
+  accent: "#266FF2",
   text: "#111111",
   bg: "#ffffff",
   fontId: "serif",
