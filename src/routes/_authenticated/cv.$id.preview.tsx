@@ -177,74 +177,82 @@ function PreviewPage() {
   }
 
 
-  async function doDownload(format: "pdf" | "jpg" | "png") {
-    const node = sheetRefs.current[activeLang];
-    if (!node) return;
-    setDownloading(format);
-    try {
-      const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
-        import("html2canvas-pro"),
-        import("jspdf"),
-      ]);
-      const canvas = await html2canvas(node, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: cust.bg,
-        logging: false,
-      });
-      const safeName = (generated?.[activeLang]?.fullName || "cv")
+  function safeFileBase() {
+    return (
+      (generated?.[activeLang]?.fullName || "cv")
         .replace(/[^\p{L}\p{N}\-_ ]/gu, "")
         .trim()
-        .replace(/\s+/g, "_") || "cv";
+        .replace(/\s+/g, "_") || "cv"
+    );
+  }
 
-      if (format === "jpg" || format === "png") {
-        const mime = format === "jpg" ? "image/jpeg" : "image/png";
-        const blob = await new Promise<Blob | null>((resolve) =>
-          canvas.toBlob(resolve, mime, 0.95),
-        );
-        if (!blob) throw new Error("Couldn't create image");
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${safeName}_${activeLang}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        // PDF — slice canvas across A4 pages so nothing gets clipped and no
-        // duplicate blank pages appear.
-        const pdf = new jsPDFMod.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgW = pageW;
-        const imgH = (canvas.height * imgW) / canvas.width;
+  async function renderBlob(format: "pdf" | "jpg" | "png"): Promise<{ blob: Blob; filename: string } | null> {
+    const node = sheetRefs.current[activeLang];
+    if (!node) return null;
+    const [{ default: html2canvas }, jsPDFMod] = await Promise.all([
+      import("html2canvas-pro"),
+      import("jspdf"),
+    ]);
+    const canvas = await html2canvas(node, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: cust.bg,
+      logging: false,
+    });
+    const safeName = safeFileBase();
 
-        if (imgH <= pageH) {
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
-        } else {
-          const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
-          let y = 0;
-          let first = true;
-          while (y < canvas.height) {
-            const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
-            const slice = document.createElement("canvas");
-            slice.width = canvas.width;
-            slice.height = sliceHeight;
-            const ctx = slice.getContext("2d");
-            if (!ctx) break;
-            ctx.fillStyle = cust.bg;
-            ctx.fillRect(0, 0, slice.width, slice.height);
-            ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-            const sliceImgH = (sliceHeight * imgW) / canvas.width;
-            if (!first) pdf.addPage();
-            pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
-            first = false;
-            y += sliceHeight;
-          }
-        }
-        pdf.save(`${safeName}_${activeLang}.pdf`);
+    if (format === "jpg" || format === "png") {
+      const mime = format === "jpg" ? "image/jpeg" : "image/png";
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, 0.95));
+      if (!blob) throw new Error("Couldn't create image");
+      return { blob, filename: `${safeName}_${activeLang}.${format}` };
+    }
+
+    const pdf = new jsPDFMod.jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    if (imgH <= pageH) {
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+    } else {
+      const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
+      let y = 0;
+      let first = true;
+      while (y < canvas.height) {
+        const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
+        const slice = document.createElement("canvas");
+        slice.width = canvas.width;
+        slice.height = sliceHeight;
+        const ctx = slice.getContext("2d");
+        if (!ctx) break;
+        ctx.fillStyle = cust.bg;
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        const sliceImgH = (sliceHeight * imgW) / canvas.width;
+        if (!first) pdf.addPage();
+        pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
+        first = false;
+        y += sliceHeight;
       }
+    }
+    const blob = pdf.output("blob");
+    return { blob, filename: `${safeName}_${activeLang}.pdf` };
+  }
+
+  async function doDownload(format: "pdf" | "jpg" | "png") {
+    setDownloading(format);
+    try {
+      const out = await renderBlob(format);
+      if (!out) return;
+      const url = URL.createObjectURL(out.blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = out.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
     } finally {
@@ -252,24 +260,12 @@ function PreviewPage() {
     }
   }
 
-  function buildShareText() {
+  function shortShareMessage() {
     const cv = generated?.[activeLang];
-    if (!cv) return "";
-    const lines: string[] = [];
-    lines.push(`${cv.fullName} — ${cv.headline}`);
-    const contact = [cv.contact.email, cv.contact.phone, cv.contact.city].filter(Boolean).join(" · ");
-    if (contact) lines.push(contact);
-    if (cv.summary) lines.push("", cv.summary);
-    if (cv.experience.length) {
-      lines.push("", "Experience:");
-      cv.experience.forEach((j) => {
-        lines.push(`• ${j.role} — ${j.company} (${j.dates})`);
-        j.bullets.slice(0, 3).forEach((b) => lines.push(`   - ${b}`));
-      });
-    }
-    if (cv.skills.length) lines.push("", `Skills: ${cv.skills.join(", ")}`);
-    return lines.join("\n");
+    const name = cv?.fullName || "";
+    return name ? `Hi, please find my CV attached. — ${name}` : "Hi, please find my CV attached.";
   }
+
 
   async function runTailor() {
     if (tailorText.trim().length < 20) {
