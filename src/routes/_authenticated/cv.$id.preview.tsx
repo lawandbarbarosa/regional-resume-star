@@ -193,11 +193,15 @@ function PreviewPage() {
       import("html2canvas-pro"),
       import("jspdf"),
     ]);
+    // Render at natural fixed-A4 layout, ignoring any responsive down-scale
     const canvas = await html2canvas(node, {
       scale: 2,
       useCORS: true,
       backgroundColor: cust.bg,
       logging: false,
+      width: node.offsetWidth,
+      height: node.scrollHeight,
+      windowWidth: 1200,
     });
     const safeName = safeFileBase();
 
@@ -212,27 +216,50 @@ function PreviewPage() {
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const imgW = pageW;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    if (imgH <= pageH) {
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+    const naturalImgH = (canvas.height * imgW) / canvas.width;
+
+    // Cap output to a maximum of 2 A4 pages: rescale the entire canvas to fit.
+    const MAX_PAGES = 2;
+    const maxTotalMM = pageH * MAX_PAGES;
+    let sourceCanvas: HTMLCanvasElement = canvas;
+    let finalImgH = naturalImgH;
+    if (naturalImgH > maxTotalMM) {
+      const ratio = maxTotalMM / naturalImgH;
+      const scaled = document.createElement("canvas");
+      scaled.width = canvas.width;
+      scaled.height = Math.floor(canvas.height * ratio);
+      const sctx = scaled.getContext("2d");
+      if (sctx) {
+        sctx.fillStyle = cust.bg;
+        sctx.fillRect(0, 0, scaled.width, scaled.height);
+        sctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, scaled.width, scaled.height);
+        sourceCanvas = scaled;
+        finalImgH = maxTotalMM;
+      }
+    }
+
+    if (finalImgH <= pageH + 0.5) {
+      pdf.addImage(sourceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, finalImgH);
     } else {
-      const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
+      const pxPerPage = Math.floor((pageH / imgW) * sourceCanvas.width);
       let y = 0;
       let first = true;
-      while (y < canvas.height) {
-        const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
+      let pagesUsed = 0;
+      while (y < sourceCanvas.height && pagesUsed < MAX_PAGES) {
+        const sliceHeight = Math.min(pxPerPage, sourceCanvas.height - y);
         const slice = document.createElement("canvas");
-        slice.width = canvas.width;
+        slice.width = sourceCanvas.width;
         slice.height = sliceHeight;
         const ctx = slice.getContext("2d");
         if (!ctx) break;
         ctx.fillStyle = cust.bg;
         ctx.fillRect(0, 0, slice.width, slice.height);
-        ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-        const sliceImgH = (sliceHeight * imgW) / canvas.width;
+        ctx.drawImage(sourceCanvas, 0, y, sourceCanvas.width, sliceHeight, 0, 0, sourceCanvas.width, sliceHeight);
+        const sliceImgH = (sliceHeight * imgW) / sourceCanvas.width;
         if (!first) pdf.addPage();
         pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
         first = false;
+        pagesUsed += 1;
         y += sliceHeight;
       }
     }
@@ -430,20 +457,21 @@ function PreviewPage() {
           {!generated ? (
             <div className="text-center py-20 text-muted-foreground">{w(lang, "preview_empty")}</div>
           ) : (
-            <div className="grid gap-6 grid-cols-1">
+            <div className="flex flex-col gap-6 items-center">
               {outLangs.map((l) => {
                 const cv = generated[l];
                 if (!cv) return null;
                 return (
-                  <div
-                    key={l}
-                    ref={(el) => { sheetRefs.current[l] = el; }}
-                    data-cv-lang={l}
-                    className={`cv-sheet shadow-sm ${LANG_FONT[l]}`}
-                    dir={LANG_DIR[l]}
-                    style={sheetStyle}
-                  >
-                    <CvRender template={template} cv={cv} cust={cust} />
+                  <div key={l} className="cv-sheet-frame">
+                    <div
+                      ref={(el) => { sheetRefs.current[l] = el; }}
+                      data-cv-lang={l}
+                      className={`cv-sheet shadow-lg ${LANG_FONT[l]}`}
+                      dir={LANG_DIR[l]}
+                      style={sheetStyle}
+                    >
+                      <CvRender template={template} cv={cv} cust={cust} />
+                    </div>
                   </div>
                 );
               })}
@@ -503,6 +531,12 @@ function PreviewPage() {
       </Dialog>
 
       <style>{`
+        .cv-sheet-frame {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          /* On small screens, scale the fixed-A4 sheet down to fit */
+        }
         .cv-sheet {
           background: var(--cv-bg);
           color: var(--cv-text);
@@ -510,9 +544,18 @@ function PreviewPage() {
           font-size: var(--cv-size);
           line-height: var(--cv-line);
           padding: var(--cv-pad);
+          width: 816px;
           min-height: 1056px;
-          max-width: 816px;
-          margin: 0 auto;
+          box-sizing: border-box;
+          transform-origin: top center;
+        }
+        @media (max-width: 880px) {
+          .cv-sheet-frame { overflow: hidden; width: 100%; }
+          .cv-sheet {
+            --cv-scale: calc((100vw - 32px) / 816);
+            transform: scale(var(--cv-scale));
+            margin-bottom: calc((var(--cv-scale) - 1) * 1056px);
+          }
         }
         .cv-sheet .cv-heading {
           text-transform: var(--cv-heading-transform);
