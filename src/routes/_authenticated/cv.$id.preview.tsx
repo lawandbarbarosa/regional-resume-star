@@ -668,6 +668,7 @@ function ShareEmailDialog({
   onOpenChange,
   lang,
   fullName,
+  senderEmail,
   defaultBody,
   renderBlob,
 }: {
@@ -675,9 +676,11 @@ function ShareEmailDialog({
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   fullName: string;
+  senderEmail: string;
   defaultBody: string;
   renderBlob: RenderBlob;
 }) {
+  const sendEmailFn = useServerFn(sendCvEmail);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState(fullName ? `CV — ${fullName}` : "CV");
   const [body, setBody] = useState(defaultBody);
@@ -696,22 +699,30 @@ function ShareEmailDialog({
     try {
       const out = await renderBlob(format);
       if (!out) throw new Error("Couldn't render CV");
-      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
-      const file = new File([out.blob], out.filename, { type: mime });
-      const shared = await tryNativeShare(file, body, subject);
-      if (!shared) {
-        downloadBlob(out.blob, out.filename);
-        toast.success("CV downloaded — attach it in the email that opens.");
-        const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = href;
-      }
+      const mime =
+        format === "pdf" ? "application/pdf" : format === "png" ? "image/png" : "image/jpeg";
+      const contentBase64 = await blobToBase64(out.blob);
+      await sendEmailFn({
+        data: {
+          to: to.trim(),
+          subject,
+          message: body,
+          replyTo: senderEmail || undefined,
+          senderName: fullName || undefined,
+          filename: out.filename,
+          contentBase64,
+          contentType: mime as "application/pdf" | "image/jpeg" | "image/png",
+        },
+      });
+      toast.success("Email sent.");
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      toast.error(e instanceof Error ? e.message : "Failed to send email");
     } finally {
       setBusy(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
