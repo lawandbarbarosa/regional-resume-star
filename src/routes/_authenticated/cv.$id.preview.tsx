@@ -539,6 +539,17 @@ function PreviewPage() {
 /* ---------------- share dialogs ---------------- */
 
 type ShareFormat = "pdf" | "jpg";
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+  }
+  return btoa(bin);
+}
 type RenderBlob = (format: "pdf" | "jpg" | "png") => Promise<{ blob: Blob; filename: string } | null>;
 
 async function tryNativeShare(file: File, message: string, title: string): Promise<boolean> {
