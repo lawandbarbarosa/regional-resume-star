@@ -218,33 +218,44 @@ function PreviewPage() {
     const imgW = pageW;
     const naturalImgH = (canvas.height * imgW) / canvas.width;
 
-    // Cap output to a maximum of 2 A4 pages: scale down if content is taller.
+    // Cap output to a maximum of 2 A4 pages: rescale the entire canvas to fit.
     const MAX_PAGES = 2;
-    const maxTotalH = pageH * MAX_PAGES;
-    const finalImgH = Math.min(naturalImgH, maxTotalH);
-    const scaleRatio = finalImgH / naturalImgH;
-    // Effective source-canvas height that maps to finalImgH (before slicing per page)
-    const effectiveCanvasH = canvas.height * scaleRatio;
+    const maxTotalMM = pageH * MAX_PAGES;
+    let sourceCanvas: HTMLCanvasElement = canvas;
+    let finalImgH = naturalImgH;
+    if (naturalImgH > maxTotalMM) {
+      const ratio = maxTotalMM / naturalImgH;
+      const scaled = document.createElement("canvas");
+      scaled.width = canvas.width;
+      scaled.height = Math.floor(canvas.height * ratio);
+      const sctx = scaled.getContext("2d");
+      if (sctx) {
+        sctx.fillStyle = cust.bg;
+        sctx.fillRect(0, 0, scaled.width, scaled.height);
+        sctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, scaled.width, scaled.height);
+        sourceCanvas = scaled;
+        finalImgH = maxTotalMM;
+      }
+    }
 
-    if (finalImgH <= pageH) {
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, finalImgH);
+    if (finalImgH <= pageH + 0.5) {
+      pdf.addImage(sourceCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, finalImgH);
     } else {
-      // Pixels of the source canvas that fit into one A4 page
-      const pxPerPage = Math.floor((pageH / imgW) * canvas.width);
+      const pxPerPage = Math.floor((pageH / imgW) * sourceCanvas.width);
       let y = 0;
       let first = true;
       let pagesUsed = 0;
-      while (y < effectiveCanvasH && pagesUsed < MAX_PAGES) {
-        const sliceHeight = Math.min(pxPerPage, Math.ceil(effectiveCanvasH - y));
+      while (y < sourceCanvas.height && pagesUsed < MAX_PAGES) {
+        const sliceHeight = Math.min(pxPerPage, sourceCanvas.height - y);
         const slice = document.createElement("canvas");
-        slice.width = canvas.width;
+        slice.width = sourceCanvas.width;
         slice.height = sliceHeight;
         const ctx = slice.getContext("2d");
         if (!ctx) break;
         ctx.fillStyle = cust.bg;
         ctx.fillRect(0, 0, slice.width, slice.height);
-        ctx.drawImage(canvas, 0, y, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-        const sliceImgH = (sliceHeight * imgW) / canvas.width;
+        ctx.drawImage(sourceCanvas, 0, y, sourceCanvas.width, sliceHeight, 0, 0, sourceCanvas.width, sliceHeight);
+        const sliceImgH = (sliceHeight * imgW) / sourceCanvas.width;
         if (!first) pdf.addPage();
         pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
         first = false;
