@@ -699,8 +699,7 @@ function ShareEmailDialog({
     try {
       const out = await renderBlob(format);
       if (!out) throw new Error("Couldn't render CV");
-      const mime =
-        format === "pdf" ? "application/pdf" : format === "png" ? "image/png" : "image/jpeg";
+      const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
       const contentBase64 = await blobToBase64(out.blob);
       await sendEmailFn({
         data: {
