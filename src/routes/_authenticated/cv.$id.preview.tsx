@@ -504,6 +504,12 @@ function PreviewPage() {
       </Dialog>
 
       <style>{`
+        .cv-sheet-frame {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          /* On small screens, scale the fixed-A4 sheet down to fit */
+        }
         .cv-sheet {
           background: var(--cv-bg);
           color: var(--cv-text);
@@ -511,9 +517,14 @@ function PreviewPage() {
           font-size: var(--cv-size);
           line-height: var(--cv-line);
           padding: var(--cv-pad);
+          width: 816px;
           min-height: 1056px;
-          max-width: 816px;
-          margin: 0 auto;
+          box-sizing: border-box;
+          transform-origin: top center;
+        }
+        @media (max-width: 900px) {
+          .cv-sheet-frame { overflow: hidden; }
+          .cv-sheet { transform: scale(var(--cv-scale, 0.5)); margin-bottom: calc((1 - var(--cv-scale, 0.5)) * -1056px); }
         }
         .cv-sheet .cv-heading {
           text-transform: var(--cv-heading-transform);
