@@ -467,6 +467,7 @@ function PreviewPage() {
         onOpenChange={setEmailOpen}
         lang={lang}
         fullName={generated?.[activeLang]?.fullName || ""}
+        senderEmail={generated?.[activeLang]?.contact?.email || ""}
         defaultBody={shortShareMessage()}
         renderBlob={renderBlob}
       />
