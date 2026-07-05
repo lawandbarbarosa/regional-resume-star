@@ -193,11 +193,15 @@ function PreviewPage() {
       import("html2canvas-pro"),
       import("jspdf"),
     ]);
+    // Render at natural fixed-A4 layout, ignoring any responsive down-scale
     const canvas = await html2canvas(node, {
       scale: 2,
       useCORS: true,
       backgroundColor: cust.bg,
       logging: false,
+      width: node.offsetWidth,
+      height: node.scrollHeight,
+      windowWidth: 1200,
     });
     const safeName = safeFileBase();
 
@@ -212,15 +216,26 @@ function PreviewPage() {
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const imgW = pageW;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    if (imgH <= pageH) {
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, imgH);
+    const naturalImgH = (canvas.height * imgW) / canvas.width;
+
+    // Cap output to a maximum of 2 A4 pages: scale down if content is taller.
+    const MAX_PAGES = 2;
+    const maxTotalH = pageH * MAX_PAGES;
+    const finalImgH = Math.min(naturalImgH, maxTotalH);
+    const scaleRatio = finalImgH / naturalImgH;
+    // Effective source-canvas height that maps to finalImgH (before slicing per page)
+    const effectiveCanvasH = canvas.height * scaleRatio;
+
+    if (finalImgH <= pageH) {
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, finalImgH);
     } else {
-      const pageCanvasHeightPx = Math.floor((pageH * canvas.width) / pageW);
+      // Pixels of the source canvas that fit into one A4 page
+      const pxPerPage = Math.floor((pageH / imgW) * canvas.width);
       let y = 0;
       let first = true;
-      while (y < canvas.height) {
-        const sliceHeight = Math.min(pageCanvasHeightPx, canvas.height - y);
+      let pagesUsed = 0;
+      while (y < effectiveCanvasH && pagesUsed < MAX_PAGES) {
+        const sliceHeight = Math.min(pxPerPage, Math.ceil(effectiveCanvasH - y));
         const slice = document.createElement("canvas");
         slice.width = canvas.width;
         slice.height = sliceHeight;
@@ -233,6 +248,7 @@ function PreviewPage() {
         if (!first) pdf.addPage();
         pdf.addImage(slice.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgW, sliceImgH);
         first = false;
+        pagesUsed += 1;
         y += sliceHeight;
       }
     }
