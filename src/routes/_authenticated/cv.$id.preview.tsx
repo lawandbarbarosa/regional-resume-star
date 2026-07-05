@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import type { CvLang, GeneratedByLang, GeneratedCV, TemplateId } from "@/lib/cv-types";
 import { generateCv, tailorCvForJob } from "@/lib/cv-generate.functions";
+import { sendCvEmail } from "@/lib/email-send.functions";
 import {
   Dialog,
   DialogContent,
@@ -466,6 +467,7 @@ function PreviewPage() {
         onOpenChange={setEmailOpen}
         lang={lang}
         fullName={generated?.[activeLang]?.fullName || ""}
+        senderEmail={generated?.[activeLang]?.contact?.email || ""}
         defaultBody={shortShareMessage()}
         renderBlob={renderBlob}
       />
@@ -537,6 +539,17 @@ function PreviewPage() {
 /* ---------------- share dialogs ---------------- */
 
 type ShareFormat = "pdf" | "jpg";
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+  }
+  return btoa(bin);
+}
 type RenderBlob = (format: "pdf" | "jpg" | "png") => Promise<{ blob: Blob; filename: string } | null>;
 
 async function tryNativeShare(file: File, message: string, title: string): Promise<boolean> {
@@ -666,6 +679,7 @@ function ShareEmailDialog({
   onOpenChange,
   lang,
   fullName,
+  senderEmail,
   defaultBody,
   renderBlob,
 }: {
@@ -673,9 +687,11 @@ function ShareEmailDialog({
   onOpenChange: (v: boolean) => void;
   lang: ReturnType<typeof useLang>["lang"];
   fullName: string;
+  senderEmail: string;
   defaultBody: string;
   renderBlob: RenderBlob;
 }) {
+  const sendEmailFn = useServerFn(sendCvEmail);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState(fullName ? `CV — ${fullName}` : "CV");
   const [body, setBody] = useState(defaultBody);
@@ -695,21 +711,28 @@ function ShareEmailDialog({
       const out = await renderBlob(format);
       if (!out) throw new Error("Couldn't render CV");
       const mime = format === "pdf" ? "application/pdf" : "image/jpeg";
-      const file = new File([out.blob], out.filename, { type: mime });
-      const shared = await tryNativeShare(file, body, subject);
-      if (!shared) {
-        downloadBlob(out.blob, out.filename);
-        toast.success("CV downloaded — attach it in the email that opens.");
-        const href = `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = href;
-      }
+      const contentBase64 = await blobToBase64(out.blob);
+      await sendEmailFn({
+        data: {
+          to: to.trim(),
+          subject,
+          message: body,
+          replyTo: senderEmail || undefined,
+          senderName: fullName || undefined,
+          filename: out.filename,
+          contentBase64,
+          contentType: mime as "application/pdf" | "image/jpeg" | "image/png",
+        },
+      });
+      toast.success("Email sent.");
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      toast.error(e instanceof Error ? e.message : "Failed to send email");
     } finally {
       setBusy(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
