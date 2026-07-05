@@ -549,9 +549,13 @@ function PreviewPage() {
           box-sizing: border-box;
           transform-origin: top center;
         }
-        @media (max-width: 900px) {
-          .cv-sheet-frame { overflow: hidden; }
-          .cv-sheet { transform: scale(var(--cv-scale, 0.5)); margin-bottom: calc((1 - var(--cv-scale, 0.5)) * -1056px); }
+        @media (max-width: 880px) {
+          .cv-sheet-frame { overflow: hidden; width: 100%; }
+          .cv-sheet {
+            --cv-scale: calc((100vw - 32px) / 816);
+            transform: scale(var(--cv-scale));
+            margin-bottom: calc((var(--cv-scale) - 1) * 1056px);
+          }
         }
         .cv-sheet .cv-heading {
           text-transform: var(--cv-heading-transform);
