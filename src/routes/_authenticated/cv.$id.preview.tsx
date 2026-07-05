@@ -8,6 +8,7 @@ import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 import { w } from "@/lib/cv-wizard-strings";
 import type { CvLang, GeneratedByLang, GeneratedCV, TemplateId } from "@/lib/cv-types";
 import { generateCv, tailorCvForJob } from "@/lib/cv-generate.functions";
+import { sendCvEmail } from "@/lib/email-send.functions";
 import {
   Dialog,
   DialogContent,
