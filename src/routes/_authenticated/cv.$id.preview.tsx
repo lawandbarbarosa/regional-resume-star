@@ -430,20 +430,21 @@ function PreviewPage() {
           {!generated ? (
             <div className="text-center py-20 text-muted-foreground">{w(lang, "preview_empty")}</div>
           ) : (
-            <div className="grid gap-6 grid-cols-1">
+            <div className="flex flex-col gap-6 items-center">
               {outLangs.map((l) => {
                 const cv = generated[l];
                 if (!cv) return null;
                 return (
-                  <div
-                    key={l}
-                    ref={(el) => { sheetRefs.current[l] = el; }}
-                    data-cv-lang={l}
-                    className={`cv-sheet shadow-sm ${LANG_FONT[l]}`}
-                    dir={LANG_DIR[l]}
-                    style={sheetStyle}
-                  >
-                    <CvRender template={template} cv={cv} cust={cust} />
+                  <div key={l} className="cv-sheet-frame">
+                    <div
+                      ref={(el) => { sheetRefs.current[l] = el; }}
+                      data-cv-lang={l}
+                      className={`cv-sheet shadow-lg ${LANG_FONT[l]}`}
+                      dir={LANG_DIR[l]}
+                      style={sheetStyle}
+                    >
+                      <CvRender template={template} cv={cv} cust={cust} />
+                    </div>
                   </div>
                 );
               })}
