@@ -102,6 +102,40 @@ function PreviewPage() {
   const [tailorBusy, setTailorBusy] = useState(false);
 
   const sheetRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const frameRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Responsive scale: keep the CV at fixed 816px (A4) internally but visually
+  // scale it down to fit the frame width on phones/tablets, so it always looks
+  // like a real CV — never a narrow column of text.
+  useEffect(() => {
+    const SHEET_W = 816;
+    const SHEET_H_MIN = 1056;
+    const update = () => {
+      for (const key of Object.keys(frameRefs.current)) {
+        const frame = frameRefs.current[key];
+        const sheet = sheetRefs.current[key];
+        if (!frame || !sheet) continue;
+        const available = frame.clientWidth;
+        const scale = Math.min(1, available / SHEET_W);
+        sheet.style.transform = scale < 1 ? `scale(${scale})` : "none";
+        sheet.style.transformOrigin = "top left";
+        const naturalH = Math.max(sheet.scrollHeight, SHEET_H_MIN);
+        frame.style.height = scale < 1 ? `${naturalH * scale}px` : "";
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    for (const key of Object.keys(frameRefs.current)) {
+      const f = frameRefs.current[key];
+      if (f) ro.observe(f);
+    }
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  });
+
 
   useEffect(() => {
     (async () => {
