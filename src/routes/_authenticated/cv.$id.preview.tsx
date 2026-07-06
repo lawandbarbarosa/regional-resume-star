@@ -564,9 +564,8 @@ function PreviewPage() {
       <style>{`
         .cv-sheet-frame {
           width: 100%;
-          display: flex;
-          justify-content: center;
-          /* On small screens, scale the fixed-A4 sheet down to fit */
+          display: block;
+          overflow: hidden;
         }
         .cv-sheet {
           background: var(--cv-bg);
@@ -578,14 +577,19 @@ function PreviewPage() {
           width: 816px;
           min-height: 1056px;
           box-sizing: border-box;
-          transform-origin: top center;
+          flex-shrink: 0;
+          transform-origin: top left;
+          margin: 0 auto;
         }
         @media (max-width: 880px) {
-          .cv-sheet-frame { overflow: hidden; width: 100%; }
           .cv-sheet {
             --cv-scale: calc((100vw - 32px) / 816);
             transform: scale(var(--cv-scale));
-            margin-bottom: calc((var(--cv-scale) - 1) * 1056px);
+            transform-origin: top left;
+            margin-left: 0;
+            margin-right: 0;
+            /* Reserve only the scaled visual height, not the natural 1056+ px */
+            margin-bottom: calc((var(--cv-scale) - 1) * 100%);
           }
         }
         .cv-sheet .cv-heading {
