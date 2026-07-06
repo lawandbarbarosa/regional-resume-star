@@ -613,18 +613,7 @@ function PreviewPage() {
           box-sizing: border-box;
           flex-shrink: 0;
           transform-origin: top left;
-          margin: 0 auto;
-        }
-        @media (max-width: 880px) {
-          .cv-sheet {
-            --cv-scale: calc((100vw - 32px) / 816px);
-            transform: scale(var(--cv-scale));
-            transform-origin: top left;
-            margin-left: 0;
-            margin-right: 0;
-            /* Reserve only the scaled visual height, not the natural 1056+ px */
-            margin-bottom: calc((var(--cv-scale) - 1) * 100%);
-          }
+          /* transform is applied via JS to fit the frame width on any device */
         }
         .cv-sheet .cv-heading {
           text-transform: var(--cv-heading-transform);
