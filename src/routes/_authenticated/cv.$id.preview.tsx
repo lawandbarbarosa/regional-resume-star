@@ -583,7 +583,7 @@ function PreviewPage() {
         }
         @media (max-width: 880px) {
           .cv-sheet {
-            --cv-scale: calc((100vw - 32px) / 816);
+            --cv-scale: calc((100vw - 32px) / 816px);
             transform: scale(var(--cv-scale));
             transform-origin: top left;
             margin-left: 0;
