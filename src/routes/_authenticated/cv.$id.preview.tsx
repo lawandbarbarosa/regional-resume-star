@@ -527,7 +527,7 @@ function PreviewPage() {
                 const cv = generated[l];
                 if (!cv) return null;
                 return (
-                  <div key={l} className="cv-sheet-frame">
+                  <div key={l} className="cv-sheet-frame" ref={(el) => { frameRefs.current[l] = el; }}>
                     <div
                       ref={(el) => { sheetRefs.current[l] = el; }}
                       data-cv-lang={l}
