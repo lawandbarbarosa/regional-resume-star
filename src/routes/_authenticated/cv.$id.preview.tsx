@@ -193,16 +193,47 @@ function PreviewPage() {
       import("html2canvas-pro"),
       import("jspdf"),
     ]);
-    // Render at natural fixed-A4 layout, ignoring any responsive down-scale
-    const canvas = await html2canvas(node, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: cust.bg,
-      logging: false,
-      width: node.offsetWidth,
-      height: node.scrollHeight,
-      windowWidth: 1200,
-    });
+    // Temporarily neutralize the mobile responsive down-scale so html2canvas
+    // captures the full-size A4 sheet, not the shrunk-on-phone version.
+    const frame = node.parentElement as HTMLElement | null;
+    const prev = {
+      transform: node.style.transform,
+      transformOrigin: node.style.transformOrigin,
+      marginBottom: node.style.marginBottom,
+      frameOverflow: frame?.style.overflow ?? "",
+      frameWidth: frame?.style.width ?? "",
+    };
+    node.style.transform = "none";
+    node.style.transformOrigin = "top left";
+    node.style.marginBottom = "0px";
+    if (frame) {
+      frame.style.overflow = "visible";
+      frame.style.width = "816px";
+    }
+    // Force layout flush
+    void node.offsetHeight;
+
+    let canvas: HTMLCanvasElement;
+    try {
+      canvas = await html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: cust.bg,
+        logging: false,
+        width: 816,
+        height: node.scrollHeight,
+        windowWidth: 1200,
+        windowHeight: Math.max(node.scrollHeight, 1056),
+      });
+    } finally {
+      node.style.transform = prev.transform;
+      node.style.transformOrigin = prev.transformOrigin;
+      node.style.marginBottom = prev.marginBottom;
+      if (frame) {
+        frame.style.overflow = prev.frameOverflow;
+        frame.style.width = prev.frameWidth;
+      }
+    }
     const safeName = safeFileBase();
 
     if (format === "jpg" || format === "png") {
